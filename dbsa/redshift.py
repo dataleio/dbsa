@@ -143,7 +143,7 @@ class Table(BaseDialect):
             WITH CREDENTIALS '{{ credentials }}'
             {{ unload_options }};
         """).render(
-            select=select.translate(str.maketrans({"'": r"\'"})),
+            select=select.strip().strip(';').translate(str.maketrans({"'": r"\'"})),
             s3_path='s3://{{ s3_bucket }}/{{ s3_key }}', 
             credentials='aws_access_key_id={{ access_key }};aws_secret_access_key={{ secret_key }}',
             unload_options='{{ unload_options }}',
@@ -188,7 +188,7 @@ class Table(BaseDialect):
               {%- for column_value in t.column_values(filter_fn=filter_fn) %}
               {{ column_value }}{% if not loop.last %},{% endif %}
               {%- endfor %}
-            FROM {{ select if not embed_select else '({}) AS vw'.format(select) }};
+            FROM {{ select if not embed_select else '({}) AS vw'.format(select.strip().strip(';')) }};
         """).render(t=self.table, select=select, embed_select=embed_select, filter_fn=filter_fn)
 
     def get_drop_current_partition_view(self, suffix='_latest'):
