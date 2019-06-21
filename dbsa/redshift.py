@@ -114,13 +114,12 @@ class Table(BaseDialect):
               {{ column.quoted_name }}{% if not loop.last %},{% endif %}
               {%- endfor %}
             )
-            FROM '{{ s3_path }}'
-            WITH CREDENTIALS '{{ credentials }}'
-            {{ copy_options }};
-        """).render(t=self.table, cleanup_fn=cleanup_fn, filter_fn=filter_fn, 
-                    s3_path='s3://{{ s3_bucket }}/{{ s3_key }}', 
-                    credentials='aws_access_key_id={{ access_key }};aws_secret_access_key={{ secret_key }}',
-                    copy_options='{{ copy_options }}')
+            {% raw %}
+            FROM '{{ 's3://{{ s3_bucket }}/{{ s3_key }}' }}'
+            WITH CREDENTIALS '{{ 'aws_access_key_id={{ access_key }};aws_secret_access_key={{ secret_key }}' }}'
+            {{ '{{ copy_options }}' }}
+            {% endraw %};
+        """).render(t=self.table, cleanup_fn=cleanup_fn, filter_fn=filter_fn)
 
     def get_select(self, filter_fn=None):
         return Template("""
