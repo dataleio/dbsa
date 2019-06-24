@@ -456,7 +456,8 @@ class Dialect(object):
         self.table = table
         self.table.register_dialect(self)
         for fn in self._exposed_table_functions:
-            setattr(self, fn, getattr(self.table, fn))
+            if not hasattr(self, fn):
+                setattr(self, fn, getattr(self.table, fn))
 
     def add_table_column(self, column):
         self.table._columns.append(column)

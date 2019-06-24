@@ -79,7 +79,7 @@ class Table(BaseDialect):
               {%- endfor %}
             )
             {%- for property in t.properties %}
-            {{ property }}{% if not loop.last %},{% endif %}
+            {{ property }}
             {%- endfor %};
         """).render(t=self.table, filter_fn=filter_fn)
 
