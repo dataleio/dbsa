@@ -83,14 +83,14 @@ class Table(BaseDialect):
             {%- endfor %};
         """).render(t=self.table, filter_fn=filter_fn)
 
-    def get_create_staging_table(self, cleanup_fn=cleanup_fn, filter_fn=None):
+    def get_create_staging_table(self, cleanup_fn=cleanup_fn, filter_fn=None, include_partitions=False):
         return Template("""
             CREATE TABLE IF NOT EXISTS {{ t.full_staging_table_name(cleanup_fn=cleanup_fn, quoted=True, with_prefix=True) }} (
-              {%- for column in t.columns(filter_fn=filter_fn, include_partitions=False) %}
+              {%- for column in t.columns(filter_fn=filter_fn, include_partitions=include_partitions) %}
               {{ column.quoted_name }} {{ column.column_type}}{% if column.encode %} ENCODE {{ column.encode|upper }}{% endif %}{% if not loop.last %},{% endif %}
               {%- endfor %}
             );
-        """).render(t=self.table, cleanup_fn=cleanup_fn, filter_fn=filter_fn)
+        """).render(t=self.table, cleanup_fn=cleanup_fn, filter_fn=filter_fn, include_partitions=include_partitions)
 
     def get_drop_table(self):
         return Template("""
@@ -107,10 +107,10 @@ class Table(BaseDialect):
             TRUNCATE TABLE {{ t.full_table_name(quoted=True, with_prefix=True) }};
         """).render(t=self.table)
 
-    def get_copy_to_staging(self, cleanup_fn=cleanup_fn, filter_fn=None):
+    def get_copy_to_staging(self, cleanup_fn=cleanup_fn, filter_fn=None, include_partitions=False):
         return Template("""
             COPY {{ t.full_staging_table_name(cleanup_fn=cleanup_fn, quoted=True, with_prefix=True) }} (
-              {%- for column in t.columns(filter_fn=filter_fn, include_partitions=False) %}
+              {%- for column in t.columns(filter_fn=filter_fn, include_partitions=include_partitions) %}
               {{ column.quoted_name }}{% if not loop.last %},{% endif %}
               {%- endfor %}
             )
@@ -119,7 +119,7 @@ class Table(BaseDialect):
             WITH CREDENTIALS '{{ 'aws_access_key_id={{ access_key }};aws_secret_access_key={{ secret_key }}' }}'
             {{ '{{ copy_options }}' }}
             {% endraw %};
-        """).render(t=self.table, cleanup_fn=cleanup_fn, filter_fn=filter_fn)
+        """).render(t=self.table, cleanup_fn=cleanup_fn, filter_fn=filter_fn, include_partitions=include_partitions)
 
     def get_select(self, filter_fn=None):
         return Template("""
