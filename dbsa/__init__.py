@@ -8,7 +8,7 @@ Markdown documentation variable
 """
 
 MARKDOWN = """
-### {{ t.full_table_name(quoted=False, with_prefix=False) }}
+{{ header }} {{ t.full_table_name(quoted=False, with_prefix=False) }}
 {{ inspect.getdoc(t) or '' }}
 
 | Column name | Column Type | PII | Description |
@@ -464,9 +464,9 @@ class Dialect(object):
         setattr(self.table, column.name, column)
         column.register_dialect(self)
 
-    def to_markdown(self):
+    def to_markdown(self, header='###'):
         import inspect
-        return Template(MARKDOWN).render(t=self.table, inspect=inspect)
+        return Template(MARKDOWN).render(t=self.table, inspect=inspect, header=header)
 
     def get_create_table(self, filter_fn=None):
         raise NotImplemented()

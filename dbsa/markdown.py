@@ -8,6 +8,7 @@ def main(argv=sys.argv):
     parser = argparse.ArgumentParser()
     parser.add_argument('dialect')
     parser.add_argument('modules', nargs='+')
+    parser.add_argument('--ns', action='store_true')
     args = parser.parse_args()
 
     dialect_module = importlib.import_module('dbsa.' + args.dialect)
@@ -22,9 +23,13 @@ def main(argv=sys.argv):
     for pathname in paths_to_import:
         sys.path.append(pathname)
 
-    print('# Schema documentation')
+    level = 0 if args.ns is True else 1
+    if level == 1:
+        print('# Schema documentation')
+
     for module_name in module_names:
         module = importlib.import_module(module_name)
-        print('## ' + module_name)
+        print((level+1) * '#' + ' ' + module_name)
+        print(module.__doc__ or '')
         for cls_name, cls in inspect.getmembers(module, inspect.isclass):
-            print(dialect_module.Table(cls(schema=module_name)).to_markdown())
+            print(dialect_module.Table(cls(schema=module_name)).to_markdown(header='#'*(level+2)))
