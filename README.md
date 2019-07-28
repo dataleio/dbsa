@@ -19,24 +19,25 @@ The following column types are supported:
 | Date type | Presto support | Hive support | Redshift support |
 | --------- | -------------- | ------------ | ---------------- |
 | `dbsa.Boolean` | ✓ | ✓ | ✓ |
-| `dbsa.Tinyint` | | | |
-| `dbsa.Smallint` | | | |
-| `dbsa.Integer` | | | |
-| `dbsa.Bigint` | | | |
-| `dbsa.Real` | | | |
-| `dbsa.Double` | | | |
-| `dbsa.Decimal` | | | |
-| `dbsa.Varchar` | | | |
-| `dbsa.Char` | | | |
-| `dbsa.Varbinary` | | | |
-| `dbsa.JSON` | | | |
-| `dbsa.Date` | | | |
-| `dbsa.Time` | | | |
-| `dbsa.Timestamp` | | | |
-| `dbsa.Array` | | | |
-| `dbsa.Map` | | | |
-| `dbsa.Row` | | | |
-| `dbsa.IPAddress` | | | |
+| `dbsa.Tinyint` | ✓ | ✓ | ✓ |
+| `dbsa.Smallint` | ✓ | ✓ | ✓ |
+| `dbsa.Integer` | ✓ | ✓ | ✓ |
+| `dbsa.Bigint` | ✓ | ✓ | ✓ |
+| `dbsa.Real` | ✓ | ✓ | ✓ |
+| `dbsa.Double` | ✓ | ✓ | ✓ |
+| `dbsa.Decimal` | ✓ | ✓ | ✓ |
+| `dbsa.Varchar` | ✓ | ✓ | ✓ |
+| `dbsa.Char` | ✓ | ✓ | ✓ |
+| `dbsa.Varbinary` | ✓ | ✓ | |
+| `dbsa.JSON` | ✓ | ✓ AS `Varchar` | |
+| `dbsa.Date` | ✓ | ✓ | ✓ |
+| `dbsa.Time` | ✓ | | |
+| `dbsa.Timestamp` | ✓ | ✓ | ✓ |
+| `dbsa.Array` | ✓ | ✓ | |
+| `dbsa.Map` | ✓ | ✓ | |
+| `dbsa.Row` | ✓ | ✓ | |
+| `dbsa.IPAddress` | ✓ | ✓ AS `Varchar` | |
+
 
 ## Supported Table Properties
 
