@@ -18,6 +18,7 @@ from . import (
     Row,
     IPAddress,
     Format,
+    Bucket,
     Dialect as BaseDialect,
 )
 from jinja2 import Template
@@ -49,9 +50,11 @@ class Table(BaseDialect):
         Char: {'length'},
         Varbinary: {'length'},
         Format: {'format'},
+        Bucket: {'by', 'count'},
     }
     _property_types = {
         Format: 'STORED AS {{ format }}',
+        Bucket: 'CLUSTERED BY ({{ by }}) INTO {{ count }} BUCKETS',
     }
     _how_to_quote_table = '`{}`'
     _how_to_quote_column = '`{}`'

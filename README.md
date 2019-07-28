@@ -18,7 +18,7 @@ The following column types are supported:
 
 | Date type | Presto support | Hive support | Redshift support |
 | --------- | -------------- | ------------ | ---------------- |
-| `dbsa.Boolean` | [x] | [x] | [x] |
+| `dbsa.Boolean` | ✓ | ✓ | ✓ |
 | `dbsa.Tinyint` | | | |
 | `dbsa.Smallint` | | | |
 | `dbsa.Integer` | | | |
@@ -37,6 +37,17 @@ The following column types are supported:
 | `dbsa.Map` | | | |
 | `dbsa.Row` | | | |
 | `dbsa.IPAddress` | | | |
+
+## Supported Table Properties
+
+The following table properties are supported:
+
+| Date type | Presto support | Hive support | Redshift support |
+| --------- | -------------- | ------------ | ---------------- |
+| `dbsa.Format` | ✓ | ✓ | |
+| `dbsa.Bucket` | ✓ | ✓ | |
+| `dbsa.Sortkey` | | | ✓ |
+| `dbsa.DistributionKey` | | | ✓ |
 
 ## PII data types for column classification
 
