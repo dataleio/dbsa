@@ -79,11 +79,11 @@ class Table(BaseDialect):
         return Template("""
             CREATE TABLE IF NOT EXISTS {{ t.full_table_name(quoted=True, with_prefix=True) }} (
               {%- for column in d.columns(filter_fn=filter_fn) %}
-              {{ column.quoted_name }} {{ column.column_type}}{% if column.comment %} COMMENT '{{ column.comment|escape }}'{% endif %}{% if not loop.last %},{% endif %}
+              {{ column.quoted_name }} {{ column.column_type}}{% if column.comment %} COMMENT '{{ column.comment|replace("'", "''") }}'{% endif %}{% if not loop.last %},{% endif %}
               {%- endfor %}
             )
             {%- if inspect.getdoc(t) %}
-            COMMENT '{{ inspect.getdoc(t)|escape|trim }}'
+            COMMENT '{{ inspect.getdoc(t)|replace("'", "''")|trim }}'
             {%- endif %}
             {%- if t.properties or t.partitions %}
             WITH (
