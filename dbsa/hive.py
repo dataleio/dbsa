@@ -64,16 +64,16 @@ class Table(BaseDialect):
         return Template("""
             CREATE {% if external_table %}EXTERNAL {% endif %}TABLE IF NOT EXISTS {{ t.full_table_name(quoted=True, with_prefix=True) }} (
               {%- for column in t.columns(filter_fn=filter_fn, include_partitions=False) %}
-              {{ column.quoted_name }} {{ column.column_type}}{% if column.comment %} COMMENT '{{ column.comment|replace("'", "\'") }}'{% endif %}{% if not loop.last %},{% endif %}
+              {{ column.quoted_name }} {{ column.column_type}}{% if column.comment %} COMMENT '{{ column.comment|replace("'", "\\'") }}'{% endif %}{% if not loop.last %},{% endif %}
               {%- endfor %}
             )
             {%- if inspect.getdoc(t) %}
-            COMMENT '{{ inspect.getdoc(t)|replace("'", "\'")|trim }}'
+            COMMENT '{{ inspect.getdoc(t)|replace("'", "\\'")|trim }}'
             {%- endif %}
             {%- if t.partitions %}
             PARTITIONED BY (
               {%- for partition in t.partitions %}
-              {{ partition.quoted_name }} {{ partition.column_type }}{% if partition.comment %} COMMENT '{{ partition.comment|replace("'", "\'") }}'{% endif %}{% if not loop.last %},{% endif %}
+              {{ partition.quoted_name }} {{ partition.column_type }}{% if partition.comment %} COMMENT '{{ partition.comment|replace("'", "\\'") }}'{% endif %}{% if not loop.last %},{% endif %}
               {%- endfor %}
             )
             {%- endif %}
