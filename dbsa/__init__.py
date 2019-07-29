@@ -93,7 +93,8 @@ class PartitionRetentionPolicy(TablePolicy):
         return dialect.clone(**self.earliest_partition) 
 
     def resolve(self, dialect):
-        return self.table(dialect).get_delete_current_partition(
+        tbl = self.table(dialect)
+        return tbl.get_delete_current_partition(
             ignored_partitions=set(tbl.partition_names()) - set(self.earliest_partition.keys())
         )
 
