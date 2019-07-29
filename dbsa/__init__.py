@@ -89,9 +89,11 @@ class PartitionRetentionPolicy(TablePolicy):
     def __init__(self, earliest_partition):
         self.earliest_partition = earliest_partition
 
+    def table(self, dialect):
+        return dialect.clone(**self.earliest_partition) 
+
     def resolve(self, dialect):
-        tbl = dialect.clone(**self.earliest_partition)
-        return tbl.get_delete_current_partition(
+        return self.table(dialect).get_delete_current_partition(
             ignored_partitions=set(tbl.partition_names()) - set(self.earliest_partition.keys())
         )
 
@@ -497,8 +499,11 @@ class Dialect(object):
             **kwargs,
         ))
 
+    def lookup_policy(self, type_cls):
+        return self.table._policies.get(type_cls.__name__)
+
     def resolve_policy(self, type_cls):
-        lookup = self.table._policies.get(type_cls.__name__)
+        lookup = self.lookup_policy(type_cls.__name__)
         if not lookup:
             return
 
