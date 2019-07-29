@@ -90,7 +90,10 @@ class PartitionRetentionPolicy(TablePolicy):
         self.earliest_partition = earliest_partition
 
     def resolve(self, dialect):
-        return dialect.clone(**self.earliest_partition).get_delete_current_partition()
+        tbl = dialect.clone(**self.earliest_partition)
+        return tbl.get_delete_current_partition(
+            ignored_partitions=set(tbl.partition_names()) - set(self.earliest_partition.keys())
+        )
 
 
 """
@@ -419,7 +422,7 @@ class Table(object):
         return {c.name for c in self.columns(include_partitions=include_partitions, filter_fn=filter_fn)}
 
     def partition_names(self):
-        return {c.name for p in self.partitions}
+        return {p.name for p in self.partitions}
 
     def full_table_name(self, quoted=False, with_prefix=False, suffix=''):
         table_name = self._quote((self.table_name_with_prefix if with_prefix else self.table_name) + suffix, quoted)

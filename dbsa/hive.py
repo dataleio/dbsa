@@ -93,7 +93,7 @@ class Table(BaseDialect):
 
     def get_drop_table(self):
         return Template("""
-            DROP TABLE IF EXISTS {{ t.full_table_name(quoted=True, with_prefix=True) }}
+            DROP TABLE IF EXISTS {{ t.full_table_name(quoted=True, with_prefix=True) }} PURGE
         """).render(t=self.table)
 
     def get_truncate_table(self):
@@ -122,7 +122,7 @@ class Table(BaseDialect):
         return Template("""
             ALTER TABLE {{ t.full_table_name(quoted=True, with_prefix=True) }} DROP IF EXISTS PARTITION(
                 {{ condition }}
-            )
+            ) PURGE
         """).render(
             t=self.table, 
             condition=self.table.get_current_partition_condition(condition, ignored_partitions, sep=', ') \
