@@ -76,6 +76,22 @@ class DataType(object):
         self.transform_on_insert = transform_on_insert
         self.name = None
 
+"""
+Table policies
+"""
+
+class TablePolicy(object):
+    def resolve(self, dialect):
+        raise NotImplemented('TablePolicy.resolve is not implemented')
+
+
+class PartitionRetentionPolicy(TablePolicy):
+    def __init__(self, earliest_partition):
+        self.earliest_partition = earliest_partition
+
+    def resolve(self, dialect):
+        return dialect.clone(**self.earliest_partition).get_delete_current_partition()
+
 
 """
 Generic objects that are associated to Tables. It can be a property of the table
@@ -272,7 +288,7 @@ class IPAddress(Column):
 # Class registers that counts all occurances and validates column existance
 
 class Prototype(object):
-    def __init__(self, columns, props):
+    def __init__(self, columns, props, policies):
         if not len(columns):
             raise ColumnRequired('Prototype requires at least one Column!')
 
@@ -288,21 +304,24 @@ class Prototype(object):
 
         self.columns = columns
         self.props = props
+        self.policies = policies
 
 
 class PrototypeGenerator(type):
     def __new__(metacls, name, bases, namespace, **kwds):
         cls = super(PrototypeGenerator, metacls).__new__(metacls, name, bases, dict(namespace))
-        columns, props = [], []
+        columns, props, policies = [], [], []
         for name, obj in namespace.items():
             if isinstance(obj, Column):
                 obj.name = name
                 columns.insert(bisect(columns, obj), obj)
             if isinstance(obj, TableProperty):
                 props.append(obj)
+            if isinstance(obj, TablePolicy):
+                policies.append(obj)
 
         if len(columns):
-            cls._prototype = Prototype(columns, props)
+            cls._prototype = Prototype(columns, props, policies)
 
         return cls
 
@@ -339,6 +358,7 @@ class Table(object):
                 getattr(self, column.name).value = values[column.name]
     
         self._props = copy.copy(self._prototype.props)
+        self._policies = {p.__class__.__name__ : p for p in self._prototype.policies}
 
         self.schema = schema
         self.dialect = None
@@ -467,6 +487,19 @@ class Dialect(object):
     def to_markdown(self, header='###'):
         import inspect
         return Template(MARKDOWN).render(t=self.table, inspect=inspect, header=header)
+
+    def clone(self, **kwargs):
+        return self.__class__(self.table.__class__(
+            schema=self.table.schema,
+            **kwargs,
+        ))
+
+    def resolve_policy(self, type_cls):
+        lookup = self.table._policies.get(type_cls.__name__)
+        if not lookup:
+            return
+
+        return lookup.resolve(self)
 
     def get_create_table(self, filter_fn=None):
         raise NotImplemented()
