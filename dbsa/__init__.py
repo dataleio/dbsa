@@ -86,11 +86,14 @@ class TablePolicy(object):
 
 
 class PartitionRetentionPolicy(TablePolicy):
-    def __init__(self, earliest_partition):
+    def __init__(self, ds_ago, earliest_partition=None):
         self.earliest_partition = earliest_partition
+        self.ds_ago = ds_ago
 
     def table(self, dialect):
-        return dialect.clone(**self.earliest_partition) 
+        if not self.earliest_partition:
+            raise RuntimeError('PartitionRetentionPolicy.table() is not supported without earliest_partition specified')
+        return dialect.clone(**self.earliest_partition)
 
     def resolve(self, dialect):
         tbl = self.table(dialect)
@@ -110,7 +113,7 @@ class TableProperty(object):
 
     def __init__(self, **kwargs):
         self.attrs = kwargs or {}
-    
+
     def __str__(self):
         if not self._property_type:
             raise NotImplemented('Column._property_type is not defined or __str__ method is not implemented')
@@ -154,12 +157,12 @@ class Column(object):
     @property
     def quoted_name(self):
         return self._how_to_quote.format(self.name)
-    
+
     @property
     def default_load_value(self):
         if self.pii.drop_on != PII.INSERT and self.pii.transform_on_insert is None:
             return self.quoted_name
-        
+
         if self.pii.drop_on == PII.INSERT:
             return self._column_setter.format('NULL', self.quoted_name)
 
@@ -362,7 +365,7 @@ class Table(object):
             self._columns.append(getattr(self, column.name))
             if column.name in values.keys():
                 getattr(self, column.name).value = values[column.name]
-    
+
         self._props = copy.copy(self._prototype.props)
         self._policies = {p.__class__.__name__ : p for p in self._prototype.policies}
 
@@ -388,7 +391,7 @@ class Table(object):
 
     def partition_definition(self, cleanup_fn=cleanup_fn):
         return '/'.join('{name}={value}'.format(
-            name=p.name, 
+            name=p.name,
             value=cleanup_fn(p.value, quoted=False, dashed=True),
         ) for p in self.partitions if p.value is not None)
 
