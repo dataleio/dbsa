@@ -109,7 +109,7 @@ class Table(BaseDialect):
     def get_add_current_partition(self, hdfs_path=None, condition='', params=None, ignored_partitions=None, suffix=''):
         return Template("""
             ALTER TABLE {{ t.full_table_name(quoted=True, with_prefix=True, suffix=suffix) }} ADD IF NOT EXISTS PARTITION(
-                {{ condition }}
+              {{ condition }}
             ) {% if hdfs_path %}LOCATION '{{ hdfs_path }}'{% endif %}
         """).render(
             t=self.table,
@@ -122,7 +122,7 @@ class Table(BaseDialect):
     def get_delete_current_partition(self, condition='', params=None, ignored_partitions=None, suffix=''):
         return Template("""
             ALTER TABLE {{ t.full_table_name(quoted=True, with_prefix=True, suffix='') }} DROP IF EXISTS PARTITION(
-                {{ condition }}
+              {{ condition }}
             ) PURGE
         """).render(
             t=self.table,
@@ -130,6 +130,18 @@ class Table(BaseDialect):
             condition=self.table.get_current_partition_condition(condition, ignored_partitions, sep=', ') \
                 .format(**self.table.get_current_partition_params(params))
         )
+
+    def get_select(self, filter_fn=None, suffix='', condition=''):
+        return Template("""
+            SELECT
+              {%- for column in t.columns(filter_fn=filter_fn) %}
+              {{ column.quoted_name }}{% if not loop.last %},{% endif %}
+              {%- endfor %}
+            FROM {{ t.full_table_name(quoted=True, with_prefix=True, suffix=suffix) }}
+            {%- if condition %}
+            WHERE {{ condition }}
+            {%- endif %}
+        """).render(t=self.table, filter_fn=filter_fn, suffix=suffix, condition=condition)
 
     def get_insert_into_from_table(self, source_table_name, filter_fn=None, suffix=''):
         return self.get_insert_into_via_select(select=source_table_name, filter_fn=filter_fn, embed_select=False, suffix=suffix)
@@ -177,13 +189,9 @@ class Table(BaseDialect):
     def get_create_current_partition_view(self, suffix='_latest', condition='', ignored_partitions=None, params=None):
         return Template("""
             CREATE OR REPLACE VIEW {{ t.full_table_name(quoted=True, with_prefix=True, suffix=suffix) }} AS
-            SELECT
-              {%- for column in t.columns() %}
-              {{ column.quoted_name }}{% if not loop.last %},{% endif %}
-              {%- endfor %}
-            FROM {{ t.full_table_name(quoted=True, with_prefix=True) }}
-            {%- if condition %}
-            WHERE {{ condition }}
-            {%- endif %}
-        """).render(t=self.table, condition=self.table.get_current_partition_condition(condition, ignored_partitions), suffix=suffix) \
-            .format(**self.table.get_current_partition_params(params))
+            {{ select }}
+        """).render(
+            t=self.table,
+            select=self.get_select_current_partition(condition=condition, ignored_partitions=ignored_partitions, params=params),
+            suffix=suffix,
+        )

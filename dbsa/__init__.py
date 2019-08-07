@@ -530,6 +530,17 @@ class Dialect(object):
     def get_truncate_table(self, suffix=''):
         raise NotImplemented()
 
+    def get_select(self, filter_fn=None, suffix='', condition=''):
+        raise NotImplemented()
+
+    def get_select_current_partition(self, filter_fn=None, condition='', params=None, ignored_partitions=None, suffix=''):
+        return self.get_select(
+            filter_fn=filter_fn,
+            suffix=suffix,
+            condition=self.table.get_current_partition_condition(condition, ignored_partitions) \
+                .format(**self.table.get_current_partition_params(params))
+        )
+
     def get_delete_current_partition(self, condition='', params=None, ignored_partitions=None, suffix=''):
         return self.get_delete_from(
             condition=self.table.get_current_partition_condition(condition, ignored_partitions),

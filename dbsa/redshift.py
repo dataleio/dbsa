@@ -121,14 +121,17 @@ class Table(BaseDialect):
             {% endraw %};
         """).render(t=self.table, cleanup_fn=cleanup_fn, filter_fn=filter_fn, include_partitions=include_partitions, suffix=suffix)
 
-    def get_select(self, filter_fn=None, suffix=''):
+    def get_select(self, filter_fn=None, suffix='', condition=''):
         return Template("""
             SELECT
               {%- for column in t.columns(filter_fn=filter_fn) %}
               {{ column.quoted_name }}{% if not loop.last %},{% endif %}
               {%- endfor %}
             FROM {{ t.full_table_name(quoted=True, with_prefix=True, suffix=suffix) }}
-        """).render(t=self.table, filter_fn=filter_fn, suffix=suffix)
+            {%- if condition %}
+            WHERE {{ condition }}
+            {%- endif %}
+        """).render(t=self.table, filter_fn=filter_fn, suffix=suffix, condition=condition)
 
     def get_unload_table(self, filter_fn=None):
         return self.get_unload_via_select(select=self.get_select(filter_fn))
@@ -199,17 +202,9 @@ class Table(BaseDialect):
     def get_create_current_partition_view(self, suffix='_latest', condition='', ignored_partitions=None, params=None):
         return Template("""
             CREATE OR REPLACE VIEW {{ t.full_table_name(quoted=True, with_prefix=True, suffix=suffix) }} AS
-            SELECT
-              {%- for column in t.columns() %}
-              {{ column.quoted_name }}{% if not loop.last %},{% endif %}
-              {%- endfor %}
-            FROM {{ t.full_table_name(quoted=True, with_prefix=True) }}
-            {%- if condition %}
-            WHERE {{ condition }}
-            {%- endif %};
+            {{ select }};
         """).render(
             t=self.table,
-            condition=self.table.get_current_partition_condition(condition, ignored_partitions) \
-                .format(**self.table.get_current_partition_params(params)), \
-            suffix=suffix
+            select=self.get_select_current_partition(condition=condition, ignored_partitions=ignored_partitions, params=params),
+            suffix=suffix,
         )
