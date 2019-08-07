@@ -73,11 +73,11 @@ class Table(BaseDialect):
 
         if include_partitions:
             for c in kept_partitions:
-                yield c 
+                yield c
 
-    def get_create_table(self, filter_fn=None):
+    def get_create_table(self, filter_fn=None, suffix=''):
         return Template("""
-            CREATE TABLE IF NOT EXISTS {{ t.full_table_name(quoted=True, with_prefix=True) }} (
+            CREATE TABLE IF NOT EXISTS {{ t.full_table_name(quoted=True, with_prefix=True, suffix=suffix) }} (
               {%- for column in d.columns(filter_fn=filter_fn) %}
               {{ column.quoted_name }} {{ column.column_type}}{% if column.comment %} COMMENT '{{ column.comment|replace("'", "''") }}'{% endif %}{% if not loop.last %},{% endif %}
               {%- endfor %}
@@ -99,32 +99,32 @@ class Table(BaseDialect):
               {%- endfor %}
             )
             {%- endif %}
-        """).render(t=self.table, d=self, filter_fn=filter_fn, inspect=inspect)
+        """).render(t=self.table, d=self, filter_fn=filter_fn, inspect=inspect, suffix=suffix)
 
-    def get_drop_table(self):
+    def get_drop_table(self, suffix=''):
         return Template("""
-            DROP TABLE IF EXISTS {{ t.full_table_name(quoted=True, with_prefix=True) }}
-        """).render(t=self.table)
+            DROP TABLE IF EXISTS {{ t.full_table_name(quoted=True, with_prefix=True, suffix=suffix) }}
+        """).render(t=self.table, suffix=suffix)
 
-    def get_truncate_table(self):
+    def get_truncate_table(self, suffix=''):
         return Template("""
-            TRUNCATE TABLE {{ t.full_table_name(quoted=True, with_prefix=True) }}
-        """).render(t=self.table)
+            TRUNCATE TABLE {{ t.full_table_name(quoted=True, with_prefix=True, suffix=suffix) }}
+        """).render(t=self.table, suffix=suffix)
 
-    def get_delete_from(self, condition=None, params=None):
+    def get_delete_from(self, condition=None, params=None, suffix=''):
         return Template("""
-            DELETE FROM {{ t.full_table_name(quoted=True, with_prefix=True) }}
+            DELETE FROM {{ t.full_table_name(quoted=True, with_prefix=True, suffix=suffix) }}
             {%- if condition %}
             WHERE {{ condition }}
             {%- endif %}
-        """).render(t=self.table, condition=condition).format(**(params or {}))
+        """).render(t=self.table, suffix=suffix, condition=condition).format(**(params or {}))
 
-    def get_insert_into_from_table(self, source_table_name, filter_fn=None):
-        return self.get_insert_into_via_select(select=source_table_name, filter_fn=filter_fn, embed_select=False)
+    def get_insert_into_from_table(self, source_table_name, filter_fn=None, suffix=''):
+        return self.get_insert_into_via_select(select=source_table_name, filter_fn=filter_fn, embed_select=False, suffix=suffix)
 
-    def get_insert_into_via_select(self, select, filter_fn=None, embed_select=True):
+    def get_insert_into_via_select(self, select, filter_fn=None, embed_select=True, suffix=''):
         return Template("""
-            INSERT INTO {{ t.full_table_name(quoted=True, with_prefix=True) }} (
+            INSERT INTO {{ t.full_table_name(quoted=True, with_prefix=True, suffix=suffix) }} (
               {%- for column in t.columns(filter_fn=filter_fn) %}
               {{ column.quoted_name }}{% if not loop.last %},{% endif %}
               {%- endfor %}
@@ -134,7 +134,7 @@ class Table(BaseDialect):
               {{ column_value }}{% if not loop.last %},{% endif %}
               {%- endfor %}
             FROM {{ select if not embed_select else '({}) AS vw'.format(select) }}
-        """).render(t=self.table, select=select, embed_select=embed_select)
+        """).render(t=self.table, select=select, embed_select=embed_select, suffix=suffix)
 
     def get_drop_current_partition_view(self, suffix='_latest'):
         return Template("""
@@ -144,7 +144,7 @@ class Table(BaseDialect):
     def get_create_current_partition_view(self, suffix='_latest', condition='', ignored_partitions=None, params=None):
         return Template("""
             CREATE OR REPLACE VIEW {{ t.full_table_name(quoted=True, with_prefix=True, suffix=suffix) }} AS
-            SELECT 
+            SELECT
               {%- for column in t.columns() %}
               {{ column.quoted_name }}{% if not loop.last %},{% endif %}
               {%- endfor %}
