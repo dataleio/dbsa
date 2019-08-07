@@ -513,28 +513,29 @@ class Dialect(object):
 
         return lookup.resolve(self)
 
-    def get_create_table(self, filter_fn=None):
+    def get_create_table(self, filter_fn=None, suffix=''):
         raise NotImplemented()
 
-    def get_drop_table(self):
+    def get_drop_table(self, suffix=''):
         raise NotImplemented()
 
-    def get_truncate_table(self):
+    def get_truncate_table(self, suffix=''):
         raise NotImplemented()
 
-    def get_delete_current_partition(self, condition='', params=None, ignored_partitions=None):
+    def get_delete_current_partition(self, condition='', params=None, ignored_partitions=None, suffix=''):
         return self.get_delete_from(
             condition=self.table.get_current_partition_condition(condition, ignored_partitions),
             params=self.table.get_current_partition_params(params),
+            suffix=suffix,
         )
 
-    def get_delete_from(self, condition=None, params=None):
+    def get_delete_from(self, condition=None, params=None, suffix=''):
         raise NotImplemented()
 
-    def get_insert_into_from_table(self, source_table_name, filter_fn=None):
+    def get_insert_into_from_table(self, source_table_name, filter_fn=None, suffix=''):
         raise NotImplemented()
 
-    def get_insert_into_via_select(self, select, filter_fn=None, embed_select=True):
+    def get_insert_into_via_select(self, select, filter_fn=None, embed_select=True, suffix=''):
         raise NotImplemented()
 
     def get_drop_current_partition_view(self, suffix='_latest'):

@@ -60,9 +60,9 @@ class Table(BaseDialect):
     _how_to_quote_column = '`{}`'
     _column_setter = '{} {}'
 
-    def get_create_table(self, filter_fn=None, external_table=False, hdfs_path=None, tblformat=None, tblproperties=None):
+    def get_create_table(self, filter_fn=None, external_table=False, hdfs_path=None, tblformat=None, tblproperties=None, suffix=''):
         return Template("""
-            CREATE {% if external_table %}EXTERNAL {% endif %}TABLE IF NOT EXISTS {{ t.full_table_name(quoted=True, with_prefix=True) }} (
+            CREATE {% if external_table %}EXTERNAL {% endif %}TABLE IF NOT EXISTS {{ t.full_table_name(quoted=True, with_prefix=True, suffix=suffix) }} (
               {%- for column in t.columns(filter_fn=filter_fn, include_partitions=False) %}
               {{ column.quoted_name }} {{ column.column_type}}{% if column.comment %} COMMENT '{{ column.comment|replace("'", "`") }}'{% endif %}{% if not loop.last %},{% endif %}
               {%- endfor %}
@@ -89,52 +89,54 @@ class Table(BaseDialect):
             {%- if tblproperties %}
             TBLPROPERTIES({{ ','.join(tblproperties) }})
             {%- endif %}
-        """).render(t=self.table, filter_fn=filter_fn, external_table=external_table, hdfs_path=hdfs_path, tblformat=tblformat, tblproperties=tblproperties, inspect=inspect)
+        """).render(t=self.table, filter_fn=filter_fn, external_table=external_table, hdfs_path=hdfs_path, tblformat=tblformat, tblproperties=tblproperties, inspect=inspect, suffix=suffix)
 
-    def get_drop_table(self):
+    def get_drop_table(self, suffix=''):
         return Template("""
-            DROP TABLE IF EXISTS {{ t.full_table_name(quoted=True, with_prefix=True) }} PURGE
-        """).render(t=self.table)
+            DROP TABLE IF EXISTS {{ t.full_table_name(quoted=True, with_prefix=True, suffix=suffix) }} PURGE
+        """).render(t=self.table, suffix=suffix)
 
-    def get_truncate_table(self):
+    def get_truncate_table(self, suffix=''):
         return Template("""
-            TRUNCATE TABLE {{ t.full_table_name(quoted=True, with_prefix=True) }}
-        """).render(t=self.table)
+            TRUNCATE TABLE {{ t.full_table_name(quoted=True, with_prefix=True, suffix=suffix) }}
+        """).render(t=self.table, suffix=suffix)
 
-    def get_msck_table(self):
+    def get_msck_table(self, suffix=''):
         return Template("""
-            MSCK REPAIR TABLE {{ t.full_table_name(quoted=True, with_prefix=True) }}
-        """).render(t=self.table)
+            MSCK REPAIR TABLE {{ t.full_table_name(quoted=True, with_prefix=True, suffix=suffix) }}
+        """).render(t=self.table, suffix=suffix)
 
-    def get_add_current_partition(self, hdfs_path=None, condition='', params=None, ignored_partitions=None):
+    def get_add_current_partition(self, hdfs_path=None, condition='', params=None, ignored_partitions=None, suffix=''):
         return Template("""
-            ALTER TABLE {{ t.full_table_name(quoted=True, with_prefix=True) }} ADD IF NOT EXISTS PARTITION(
+            ALTER TABLE {{ t.full_table_name(quoted=True, with_prefix=True, suffix=suffix) }} ADD IF NOT EXISTS PARTITION(
                 {{ condition }}
             ) {% if hdfs_path %}LOCATION '{{ hdfs_path }}'{% endif %}
         """).render(
-            t=self.table, 
-            hdfs_path=hdfs_path, 
+            t=self.table,
+            suffix=suffix,
+            hdfs_path=hdfs_path,
             condition=self.table.get_current_partition_condition(condition, ignored_partitions, sep=', ') \
                 .format(**self.table.get_current_partition_params(params))
         )
 
-    def get_delete_current_partition(self, condition='', params=None, ignored_partitions=None):
+    def get_delete_current_partition(self, condition='', params=None, ignored_partitions=None, suffix=''):
         return Template("""
-            ALTER TABLE {{ t.full_table_name(quoted=True, with_prefix=True) }} DROP IF EXISTS PARTITION(
+            ALTER TABLE {{ t.full_table_name(quoted=True, with_prefix=True, suffix='') }} DROP IF EXISTS PARTITION(
                 {{ condition }}
             ) PURGE
         """).render(
-            t=self.table, 
+            t=self.table,
+            suffix=suffix,
             condition=self.table.get_current_partition_condition(condition, ignored_partitions, sep=', ') \
                 .format(**self.table.get_current_partition_params(params))
         )
 
-    def get_insert_into_from_table(self, source_table_name, filter_fn=None):
-        return self.get_insert_into_via_select(select=source_table_name, filter_fn=filter_fn, embed_select=False)
+    def get_insert_into_from_table(self, source_table_name, filter_fn=None, suffix=''):
+        return self.get_insert_into_via_select(select=source_table_name, filter_fn=filter_fn, embed_select=False, suffix=suffix)
 
-    def get_insert_into_via_select(self, select, filter_fn=None, embed_select=True):
+    def get_insert_into_via_select(self, select, filter_fn=None, embed_select=True, suffix=''):
         return Template("""
-            INSERT INTO {{ t.full_table_name(quoted=True, with_prefix=True) }} 
+            INSERT INTO {{ t.full_table_name(quoted=True, with_prefix=True, suffix=suffix) }}
             {%- if t.partitions %}
             PARTITION (
               {%- for partition in t.partitions %}
@@ -152,11 +154,11 @@ class Table(BaseDialect):
               {{ column_value }}{% if not loop.last %},{% endif %}
               {%- endfor %}
             FROM {{ select.strip() if not embed_select else '({}) vw'.format(select.strip()) }}
-        """).render(t=self.table, filter_fn=filter_fn, select=select, embed_select=embed_select)
+        """).render(t=self.table, filter_fn=filter_fn, select=select, embed_select=embed_select, suffix=suffix)
 
-    def get_insert_overwrite_via_select(self, select):
+    def get_insert_overwrite_via_select(self, select, suffix=''):
         return Template("""
-            INSERT OVERWRITE TABLE {{ t.full_table_name(quoted=True, with_prefix=True) }} 
+            INSERT OVERWRITE TABLE {{ t.full_table_name(quoted=True, with_prefix=True, suffix=suffix) }}
             {%- if t.partitions %}
             PARTITION (
               {%- for partition in t.partitions %}
@@ -165,7 +167,7 @@ class Table(BaseDialect):
             )
             {%- endif %}
             {{ select }}
-        """).render(t=self.table, select=select)
+        """).render(t=self.table, select=select, suffix=suffix)
 
     def get_drop_current_partition_view(self, suffix='_latest'):
         return Template("""
@@ -175,7 +177,7 @@ class Table(BaseDialect):
     def get_create_current_partition_view(self, suffix='_latest', condition='', ignored_partitions=None, params=None):
         return Template("""
             CREATE OR REPLACE VIEW {{ t.full_table_name(quoted=True, with_prefix=True, suffix=suffix) }} AS
-            SELECT 
+            SELECT
               {%- for column in t.columns() %}
               {{ column.quoted_name }}{% if not loop.last %},{% endif %}
               {%- endfor %}
@@ -185,4 +187,3 @@ class Table(BaseDialect):
             {%- endif %}
         """).render(t=self.table, condition=self.table.get_current_partition_condition(condition, ignored_partitions), suffix=suffix) \
             .format(**self.table.get_current_partition_params(params))
-            
