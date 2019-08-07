@@ -143,6 +143,7 @@ class Column(object):
         self.pii = pii or DataType()
         self.attrs = kwargs or {}
         self.comment = comment
+        self.manually_set = False
 
         # Set up Creation Counter to track number of columns and its order
         self._creation_counter = Column._creation_counter
@@ -154,12 +155,19 @@ class Column(object):
     def __lt__(self, other):
         return self._creation_counter < other._creation_counter
 
+    def set_column_value(self, value):
+        self.value = value
+        self.manually_set = True
+
     @property
     def quoted_name(self):
         return self._how_to_quote.format(self.name)
 
     @property
     def default_load_value(self):
+        if self.manually_set:
+            return self._column_setter.format(self.value or self.quoted_name, self.quoted_name)
+
         if self.pii.drop_on != PII.INSERT and self.pii.transform_on_insert is None:
             return self.quoted_name
 
