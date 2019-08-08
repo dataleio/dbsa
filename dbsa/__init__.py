@@ -102,6 +102,17 @@ class PartitionRetentionPolicy(TablePolicy):
         )
 
 
+class PartitionAnonimisationPolicy(TablePolicy):
+    def __init__(self, ds_ago, earliest_partition=None):
+        self.earliest_partition = earliest_partition
+        self.ds_ago = ds_ago
+
+    def table(self, dialect):
+        if not self.earliest_partition:
+            raise RuntimeError('AnonomisationPolicy.table() is not supported without earliest_partition specified')
+        return dialect.clone(**self.earliest_partition)
+
+
 """
 Generic objects that are associated to Tables. It can be a property of the table
 or a column itself.

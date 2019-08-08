@@ -104,8 +104,26 @@ class Table(BaseDialect):
 
     def get_truncate_table(self, suffix=''):
         return Template("""
-            TRUNCATE TABLE {{ t.full_table_name(quoted=True, with_prefix=True) }};
+            TRUNCATE TABLE {{ t.full_table_name(quoted=True, with_prefix=True, suffix=suffix) }};
         """).render(t=self.table, suffix=suffix)
+
+    def get_update_current_partition_for_manually_set_columns(self, suffix='', condition='', ignored_partitions=None, params=None):
+        filter_fn = lambda x: x.manually_set
+        if not len(self.table.columns(filter_fn=filter_fn, include_partitions=False)):
+            return ''
+
+        return Template("""
+            UPDATE {{ t.full_table_name(quoted=True, with_prefix=True) }}
+            SET
+            {%- for column in t.columns(filter_fn=filter_fn, include_partitions=False) %}
+              {{ column.quoted_name }} = {{ column.value }}{% if not loop.last %},{% endif %}
+            {%- endfor %}
+            {%- if condition %}
+            WHERE {{ condition }}
+            {%- endif %}
+        """).render(t=self.table, suffix=suffix, filter_fn=filter_fn,
+                    condition=self.table.get_current_partition_condition(condition, ignored_partitions) \
+                        .format(**self.table.get_current_partition_params(params)))
 
     def get_copy_to_staging(self, cleanup_fn=cleanup_fn, filter_fn=None, include_partitions=False, suffix=''):
         return Template("""
