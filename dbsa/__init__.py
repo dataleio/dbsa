@@ -113,6 +113,10 @@ class PartitionAnonimisationPolicy(TablePolicy):
         return dialect.clone(**self.earliest_partition)
 
 
+class ManualAnonimisation(TablePolicy):
+    pass
+
+
 """
 Generic objects that are associated to Tables. It can be a property of the table
 or a column itself.
