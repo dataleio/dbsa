@@ -75,13 +75,35 @@ class Table(BaseDialect):
         return Template("""
             CREATE TABLE IF NOT EXISTS {{ t.full_table_name(quoted=True, with_prefix=True, suffix=suffix) }} (
               {%- for column in t.columns(filter_fn=filter_fn) %}
-              {{ column.quoted_name }} {{ column.column_type}}{% if column.encode %} ENCODE {{ column.encode|upper }}{% endif %}{% if not loop.last %},{% endif %}
+              {{ column.quoted_name }} {{ column.column_type }}{% if column.encode %} ENCODE {{ column.encode|upper }}{% endif %}{% if not loop.last %},{% endif %}
               {%- endfor %}
             )
             {%- for property in t.properties %}
             {{ property }}
             {%- endfor %};
         """).render(t=self.table, filter_fn=filter_fn, suffix=suffix)
+
+    def get_create_external_table(self, hdfs_path, fileformat, tblformat, tblproperties=None, filter_fn=None, suffix=''):
+        return Template("""
+            CREATE EXTERNAL TABLE {{ t.full_table_name(quoted=True, with_prefix=True, suffix=suffix) }} (
+              {%- for column in t.columns(filter_fn=filter_fn, include_partitions=False) %}
+              {{ column.quoted_name }} {{ column.column_type }}{% if not loop.last %},{% endif %}
+              {%- endfor %}
+            )
+            {%- if t.partitions %}
+            PARTITIONED BY (
+              {%- for partition in t.partitions %}
+              {{ partition.quoted_name }} {{ partition.column_type }}{% if not loop.last %},{% endif %}
+              {%- endfor %}
+            )
+            {%- endif %}
+            {{ tblformat }}
+            STORED AS {{ fileformat }}
+            LOCATION '{{ hdfs_path }}'
+            {%- if tblproperties %}
+            TABLE PROPERTIES ({{ ','.join(tblproperties) }})
+            {%- endif %}
+        """).render(t=self.table, filter_fn=filter_fn, suffix=suffix, tblformat=tblformat, fileformat=fileformat, tblproperties=tblproperties, hdfs_path=hdfs_path)
 
     def get_create_staging_table(self, cleanup_fn=cleanup_fn, filter_fn=None, include_partitions=False, suffix=''):
         return Template("""
@@ -91,6 +113,31 @@ class Table(BaseDialect):
               {%- endfor %}
             );
         """).render(t=self.table, cleanup_fn=cleanup_fn, filter_fn=filter_fn, include_partitions=include_partitions, suffix=suffix)
+
+    def get_add_external_current_partition(self, hdfs_path=None, condition='', params=None, ignored_partitions=None, suffix=''):
+        return Template("""
+            ALTER TABLE {{ t.full_table_name(quoted=True, with_prefix=True, suffix=suffix) }} ADD IF NOT EXISTS PARTITION(
+              {{ condition }}
+            ) LOCATION '{{ hdfs_path }}'
+        """).render(
+            t=self.table,
+            suffix=suffix,
+            hdfs_path=hdfs_path,
+            condition=self.table.get_current_partition_condition(condition, ignored_partitions, sep=', ') \
+                .format(**self.table.get_current_partition_params(params))
+        )
+
+    def get_delete_external_current_partition(self, condition='', params=None, ignored_partitions=None, suffix=''):
+        return Template("""
+            ALTER TABLE {{ t.full_table_name(quoted=True, with_prefix=True, suffix='') }} DROP IF EXISTS PARTITION(
+              {{ condition }}
+            )
+        """).render(
+            t=self.table,
+            suffix=suffix,
+            condition=self.table.get_current_partition_condition(condition, ignored_partitions, sep=', ') \
+                .format(**self.table.get_current_partition_params(params))
+        )
 
     def get_drop_table(self, suffix=''):
         return Template("""
