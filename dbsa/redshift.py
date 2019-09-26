@@ -75,7 +75,7 @@ class Table(BaseDialect):
         return Template("""
             CREATE TABLE IF NOT EXISTS {{ t.full_table_name(quoted=True, with_prefix=True, suffix=suffix) }} (
               {%- for column in t.columns(filter_fn=filter_fn) %}
-              {{ column.quoted_name }} {{ column.column_type }}{% if column.encode %} ENCODE {{ column.encode|upper }}{% endif %}{% if not loop.last %},{% endif %}
+              {{ column.quoted_name }} {{ column.column_type }}{% if column.default_value %} DEFAULT {{ column.default_value }}{% endif %}{% if column.encode %} ENCODE {{ column.encode|upper }}{% endif %}{% if not loop.last %},{% endif %}
               {%- endfor %}
             )
             {%- for property in t.properties %}
@@ -109,7 +109,7 @@ class Table(BaseDialect):
         return Template("""
             CREATE TABLE IF NOT EXISTS {{ t.full_staging_table_name(cleanup_fn=cleanup_fn, quoted=True, with_prefix=True, suffix=suffix) }} (
               {%- for column in t.columns(filter_fn=filter_fn, include_partitions=include_partitions) %}
-              {{ column.quoted_name }} {{ column.column_type}}{% if column.encode %} ENCODE {{ column.encode|upper }}{% endif %}{% if not loop.last %},{% endif %}
+              {{ column.quoted_name }} {{ column.column_type}}{% if column.default_value %} DEFAULT {{ column.default_value }}{% endif %}{% if column.encode %} ENCODE {{ column.encode|upper }}{% endif %}{% if not loop.last %},{% endif %}
               {%- endfor %}
             );
         """).render(t=self.table, cleanup_fn=cleanup_fn, filter_fn=filter_fn, include_partitions=include_partitions, suffix=suffix)

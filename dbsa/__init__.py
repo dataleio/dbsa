@@ -150,10 +150,11 @@ class Column(object):
     _how_to_quote = '"{}"'
     _column_setter = '{} AS {}'
 
-    def __init__(self, name=None, pii=None, comment=None, **kwargs):
+    def __init__(self, name=None, pii=None, comment=None, default_value=None, **kwargs):
         # Store base column values
         self.name = name
         self.value = None
+        self.default_value = default_value
         self.partition = False
         self.pii = pii or DataType()
         self.attrs = kwargs or {}
