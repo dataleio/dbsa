@@ -413,6 +413,11 @@ class Table(object):
     def table_name_with_prefix(self):
         return self.table_prefix + self.table_name
 
+    def get_property_by_type(self, type):
+        for p in self.properties:
+            if isinstance(p, type):
+                return p
+
     def partition_definition(self, cleanup_fn=cleanup_fn):
         return '/'.join('{name}={value}'.format(
             name=p.name,
