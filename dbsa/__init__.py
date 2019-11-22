@@ -344,7 +344,13 @@ class PrototypeGenerator(type):
     def __new__(metacls, name, bases, namespace, **kwds):
         cls = super(PrototypeGenerator, metacls).__new__(metacls, name, bases, dict(namespace))
         columns, props, policies = [], [], []
-        for name, obj in namespace.items():
+
+        bases_namespace = {}
+        for base in list(bases):
+            bases_namespace.update(base.__dict__)
+        bases_namespace.update(namespace)
+
+        for name, obj in bases_namespace.items():
             if isinstance(obj, Column):
                 obj.name = name
                 columns.insert(bisect(columns, obj), obj)
