@@ -180,7 +180,7 @@ class Table(BaseDialect):
               {%- endfor %}
             )
             {% raw %}
-            FROM '{{ 's3://{{ s3_bucket }}/{{ s3_key }}' }}'
+            FROM '{{ '{{ path_prefix }}://{{ path }}' }}'
             WITH CREDENTIALS '{{ 'aws_access_key_id={{ access_key }};aws_secret_access_key={{ secret_key }}' }}'
             {{ '{{ copy_options }}' }}
             {% endraw %};
