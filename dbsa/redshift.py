@@ -181,7 +181,11 @@ class Table(BaseDialect):
             )
             {% raw %}
             FROM '{{ '{{ path_prefix }}://{{ path }}' }}'
+            {{ '{% if access_key and secret_key %}' }}
             WITH CREDENTIALS '{{ 'aws_access_key_id={{ access_key }};aws_secret_access_key={{ secret_key }}' }}'
+            {{ '{% else %}' }}
+            IAM_ROLE '{{ '{{ iam_role }}' }}'
+            {{ '{% endif %}' }}
             {{ '{{ copy_options }}' }}
             {% endraw %};
         """).render(t=self.table, cleanup_fn=cleanup_fn, filter_fn=filter_fn, include_partitions=include_partitions, suffix=suffix)
@@ -218,15 +222,14 @@ class Table(BaseDialect):
             UNLOAD ('
               {{ select }}
             ')
-            TO '{{ s3_path }}'
-            WITH CREDENTIALS '{{ credentials }}'
-            {{ unload_options }};
-        """).render(
-            select=select.strip().strip(';').translate(str.maketrans({"'": r"\'"})),
-            s3_path='s3://{{ s3_bucket }}/{{ s3_key }}',
-            credentials='aws_access_key_id={{ access_key }};aws_secret_access_key={{ secret_key }}',
-            unload_options='{{ unload_options }}',
-        ))
+            TO '{{ 's3://{{ s3_bucket }}/{{ s3_key }}' }}'
+            {{ '{% if access_key and secret_key %}' }}
+            WITH CREDENTIALS '{{ 'aws_access_key_id={{ access_key }};aws_secret_access_key={{ secret_key }}' }}'
+            {{ '{% else %}' }}
+            IAM_ROLE '{{ '{{ iam_role }}' }}'
+            {{ '{% endif %}' }}
+            {{ '{{ unload_options }}' }};
+        """).render(select=select.strip().strip(';').translate(str.maketrans({"'": r"\'"}))))
 
     def get_delete_from(self, condition=None, params=None, using=None, suffix=''):
         r = Template("""
