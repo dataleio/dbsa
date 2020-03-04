@@ -147,26 +147,32 @@ class Table(BaseDialect):
         return self.get_insert_into_via_select(select=source_table_name, filter_fn=filter_fn, embed_select=False, suffix=suffix)
 
     def get_insert_into_via_select(self, select, filter_fn=None, embed_select=True, suffix=''):
+        ignore_const_partitions_fn = lambda x: (x.partition and not x.value) or not x.partition
+        if filter_fn:
+            combined_fn = lambda x: filter_fn(x) and ignore_const_partitions_fn(x)
+        else:
+            combined_fn = ignore_const_partitions_fn
+
         return Template("""
             INSERT INTO {{ t.full_table_name(quoted=True, with_prefix=True, suffix=suffix) }}
             {%- if t.partitions %}
             PARTITION (
               {%- for partition in t.partitions %}
-              {{ partition.quoted_name }} = {{ partition.value }}{% if not loop.last %},{% endif %}
+              {{ partition.quoted_name }}{% if partition.value %} = {{ partition.value }}{% endif %}{% if not loop.last %},{% endif %}
               {%- endfor %}
             )
             {%- endif %}
             (
-              {%- for column in t.columns(include_partitions=False, filter_fn=filter_fn) %}
+              {%- for column in t.columns(include_partitions=True, filter_fn=filter_fn) %}
               {{ column.quoted_name }}{% if not loop.last %},{% endif %}
               {%- endfor %}
             )
             SELECT
-              {%- for column_value in t.column_values(include_partitions=False, filter_fn=filter_fn) %}
+              {%- for column_value in t.column_values(include_partitions=True, filter_fn=filter_fn) %}
               {{ column_value }}{% if not loop.last %},{% endif %}
               {%- endfor %}
             FROM {{ select.strip() if not embed_select else '({}) vw'.format(select.strip()) }}
-        """).render(t=self.table, filter_fn=filter_fn, select=select, embed_select=embed_select, suffix=suffix)
+        """).render(t=self.table, filter_fn=combined_fn, select=select, embed_select=embed_select, suffix=suffix)
 
     def get_insert_overwrite_via_select(self, select, suffix=''):
         return Template("""
@@ -174,7 +180,7 @@ class Table(BaseDialect):
             {%- if t.partitions %}
             PARTITION (
               {%- for partition in t.partitions %}
-              {{ partition.quoted_name }} = {{ partition.value }}{% if not loop.last %},{% endif %}
+              {{ partition.quoted_name }}{% if partition.value %} = {{ partition.value }}{% endif %}{% if not loop.last %},{% endif %}
               {%- endfor %}
             )
             {%- endif %}
