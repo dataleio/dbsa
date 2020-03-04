@@ -56,7 +56,7 @@ class Table(BaseDialect):
     }
     _property_types = {
         Format: "format = '{{ format }}'",
-        Bucket: 'bucketed_by = "{{ by }}", bucket_count = {{ count }}'
+        Bucket: "bucketed_by = ARRAY[{% for c in by %}'{{ c }}'{% if not loop.last %}, {% endif %}{% endfor %}], bucket_count = {{ count }}",
     }
     _how_to_quote_table = '"{}"'
     _how_to_quote_column = '"{}"'
