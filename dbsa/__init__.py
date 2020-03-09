@@ -557,13 +557,14 @@ class Dialect(object):
     def get_truncate_table(self, suffix=''):
         raise NotImplemented()
 
-    def get_select(self, filter_fn=None, suffix='', condition=''):
+    def get_select(self, filter_fn=None, suffix='', condition='', transforms=None):
         raise NotImplemented()
 
-    def get_select_current_partition(self, filter_fn=None, condition='', params=None, ignored_partitions=None, suffix=''):
+    def get_select_current_partition(self, filter_fn=None, condition='', params=None, ignored_partitions=None, transforms=None, suffix=''):
         return self.get_select(
             filter_fn=filter_fn,
             suffix=suffix,
+            transforms=transforms,
             condition=self.table.get_current_partition_condition(condition, ignored_partitions) \
                 .format(**self.table.get_current_partition_params(params))
         )
@@ -587,5 +588,5 @@ class Dialect(object):
     def get_drop_current_partition_view(self, suffix='_latest'):
         raise NotImplemented()
 
-    def get_create_current_partition_view(self, suffix='_latest', condition='', ignored_partitions=None, params=None):
+    def get_create_current_partition_view(self, suffix='_latest', condition='', ignored_partitions=None, params=None, transforms=None):
         raise NotImplemented()

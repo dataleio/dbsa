@@ -131,17 +131,17 @@ class Table(BaseDialect):
                 .format(**self.table.get_current_partition_params(params))
         )
 
-    def get_select(self, filter_fn=None, suffix='', condition=''):
+    def get_select(self, filter_fn=None, suffix='', condition='', transforms=None):
         return Template("""
             SELECT
               {%- for column in t.columns(filter_fn=filter_fn) %}
-              {{ column.quoted_name }}{% if not loop.last %},{% endif %}
+              {% if tf[column.name] %}{{ tf[column.name].format(c=column.quoted_name) }} AS {{ column.quoted_name }}{% else %}{{ column.quoted_name }}{% endif %}{% if not loop.last %},{% endif %}
               {%- endfor %}
             FROM {{ t.full_table_name(quoted=True, with_prefix=True, suffix=suffix) }}
             {%- if condition %}
             WHERE {{ condition }}
             {%- endif %}
-        """).render(t=self.table, filter_fn=filter_fn, suffix=suffix, condition=condition)
+        """).render(t=self.table, filter_fn=filter_fn, suffix=suffix, condition=condition, tf=transforms or {})
 
     def get_insert_into_from_table(self, source_table_name, filter_fn=None, suffix=''):
         return self.get_insert_into_via_select(select=source_table_name, filter_fn=filter_fn, embed_select=False, suffix=suffix)
@@ -192,12 +192,12 @@ class Table(BaseDialect):
             DROP VIEW IF EXISTS {{ t.full_table_name(quoted=True, with_prefix=True, suffix=suffix) }}
         """).render(t=self.table, suffix=suffix)
 
-    def get_create_current_partition_view(self, suffix='_latest', condition='', ignored_partitions=None, params=None):
+    def get_create_current_partition_view(self, suffix='_latest', condition='', ignored_partitions=None, params=None, transforms=None):
         return Template("""
             CREATE OR REPLACE VIEW {{ t.full_table_name(quoted=True, with_prefix=True, suffix=suffix) }} AS
             {{ select }}
         """).render(
             t=self.table,
-            select=self.get_select_current_partition(condition=condition, ignored_partitions=ignored_partitions, params=params),
+            select=self.get_select_current_partition(condition=condition, ignored_partitions=ignored_partitions, params=params, transforms=transforms),
             suffix=suffix,
         )
