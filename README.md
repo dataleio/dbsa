@@ -6,7 +6,7 @@ This package was written in mind to **use as the abstraction layer of table sche
 
 ## Installation
 
-Installation is as simple as installing any other [Python packages](https://www.python.org/). 
+Installation is as simple as installing any other [Python packages](https://www.python.org/).
 
 ```bash
 $ pip install dbsa
@@ -16,39 +16,40 @@ $ pip install dbsa
 
 The following column types are supported:
 
-| Date type | Presto support | Hive support | Redshift support |
-| --------- | -------------- | ------------ | ---------------- |
-| `dbsa.Boolean` | ✓ | ✓ | ✓ |
-| `dbsa.Tinyint` | ✓ | ✓ | ✓ |
-| `dbsa.Smallint` | ✓ | ✓ | ✓ |
-| `dbsa.Integer` | ✓ | ✓ | ✓ |
-| `dbsa.Bigint` | ✓ | ✓ | ✓ |
-| `dbsa.Real` | ✓ | ✓ | ✓ |
-| `dbsa.Double` | ✓ | ✓ | ✓ |
-| `dbsa.Decimal` | ✓ | ✓ | ✓ |
-| `dbsa.Varchar` | ✓ | ✓ | ✓ |
-| `dbsa.Char` | ✓ | ✓ | ✓ |
-| `dbsa.Varbinary` | ✓ | ✓ | |
-| `dbsa.JSON` | ✓ | ✓ AS `Varchar` | |
-| `dbsa.Date` | ✓ | ✓ | ✓ |
-| `dbsa.Time` | ✓ | | |
-| `dbsa.Timestamp` | ✓ | ✓ | ✓ |
-| `dbsa.Array` | ✓ | ✓ | |
-| `dbsa.Map` | ✓ | ✓ | |
-| `dbsa.Row` | ✓ | ✓ | |
-| `dbsa.IPAddress` | ✓ | ✓ AS `Varchar` | |
+| Date type        | Presto support | Hive support   | Redshift support |
+| ---------------- | -------------- | -------------- | ---------------- |
+| `dbsa.Boolean`   | ✓              | ✓              | ✓                |
+| `dbsa.Tinyint`   | ✓              | ✓              | ✓                |
+| `dbsa.Smallint`  | ✓              | ✓              | ✓                |
+| `dbsa.Integer`   | ✓              | ✓              | ✓                |
+| `dbsa.Bigint`    | ✓              | ✓              | ✓                |
+| `dbsa.Real`      | ✓              | ✓              | ✓                |
+| `dbsa.Double`    | ✓              | ✓              | ✓                |
+| `dbsa.Decimal`   | ✓              | ✓              | ✓                |
+| `dbsa.Varchar`   | ✓              | ✓              | ✓                |
+| `dbsa.Char`      | ✓              | ✓              | ✓                |
+| `dbsa.Varbinary` | ✓              | ✓              |                  |
+| `dbsa.JSON`      | ✓              | ✓ AS `Varchar` |                  |
+| `dbsa.Date`      | ✓              | ✓              | ✓                |
+| `dbsa.Time`      | ✓              |                |                  |
+| `dbsa.Timestamp` | ✓              | ✓              | ✓                |
+| `dbsa.Array`     | ✓              | ✓              |                  |
+| `dbsa.Map`       | ✓              | ✓              |                  |
+| `dbsa.Row`       | ✓              | ✓              |                  |
+| `dbsa.IPAddress` | ✓              | ✓ AS `Varchar` |                  |
 
 
 ## Supported Table Properties
 
 The following table properties are supported:
 
-| Date type | Presto support | Hive support | Redshift support |
-| --------- | -------------- | ------------ | ---------------- |
-| `dbsa.Format` | ✓ | ✓ | |
-| `dbsa.Bucket` | ✓ | ✓ | |
-| `dbsa.Sortkey` | | | ✓ |
-| `dbsa.DistributionKey` | | | ✓ |
+| Date type                | Presto support | Hive support | Redshift support |
+| ------------------------ | -------------- | ------------ | ---------------- |
+| `dbsa.Format`            | ✓              | ✓            |                  |
+| `dbsa.Bucket`            | ✓              | ✓            |                  |
+| `dbsa.Sortkey`           |                |              | ✓                |
+| `dbsa.DistributionKey`   |                |              | ✓                |
+| `dbsa.DistributionStyle` |                |              | ✓                |
 
 ## PII data types for column classification
 
@@ -64,7 +65,7 @@ pii = dbsa.PII(
 )
 ```
 
-When you perform an `INSERT` statement, the transformations will be done automatically, and if column drop was specified on INSERT, the values will be truncated. 
+When you perform an `INSERT` statement, the transformations will be done automatically, and if column drop was specified on INSERT, the values will be truncated.
 
 If you set up `transform_on_delete` or drop on `DELETE` conditions, you must write a pipeline to specify when the condition met.
 

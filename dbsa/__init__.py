@@ -247,6 +247,9 @@ class Sortkey(TableProperty):
 class DistributionKey(TableProperty):
     pass
 
+class DistributionStyle(TableProperty):
+    pass
+
 # Default base column types for schema matching between dialects
 
 class Boolean(Column):

@@ -13,6 +13,7 @@ from . import (
     Timestamp,
     Sortkey,
     DistributionKey,
+    DistributionStyle,
     cleanup_fn,
     Dialect as BaseDialect,
 )
@@ -50,10 +51,12 @@ class Table(BaseDialect):
         Timestamp: {'encode'},
         Sortkey: {'keys'},
         DistributionKey: {'key'},
+        DistributionStyle: {'style'},
     }
     _property_types = {
         Sortkey: 'SORTKEY({% for c in keys %}"{{ c }}"{% if not loop.last %}, {% endif%}{% endfor %})',
         DistributionKey: 'DISTKEY("{{ key }}")',
+        DistributionStyle: 'DISTSTYLE {{ style }}',
     }
     _how_to_quote_table = '"{}"'
     _how_to_quote_column = '"{}"'
