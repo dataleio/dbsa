@@ -290,3 +290,23 @@ class Table(BaseDialect):
             select=self.get_select_current_partition(condition=condition, ignored_partitions=ignored_partitions, params=params, transforms=transforms),
             suffix=suffix,
         )
+
+    def get_create_materialized_view_via_select(self, select, filter_fn=None, embed_select=True, suffix=''):
+        return Template("""
+            CREATE MATERIALIZED VIEW {{ t.full_table_name(quoted=True, with_prefix=True, suffix=suffix) }} AS
+            SELECT
+              {%- for column_value in t.column_values(filter_fn=filter_fn) %}
+              {{ column_value }}{% if not loop.last %},{% endif %}
+              {%- endfor %}
+            FROM {{ select if not embed_select else '({}) AS vw'.format(select.strip().strip(';')) }};
+        """).render(t=self.table, select=select, embed_select=embed_select, filter_fn=filter_fn, suffix=suffix)
+
+    def get_drop_materialized_view(self, suffix=''):
+        return Template("""
+            DROP MATERIALIZED VIEW {{ t.full_table_name(quoted=True, with_prefix=True, suffix=suffix) }};
+        """).render(t=self.table, suffix=suffix)
+
+    def get_refresh_materialized_view(self, suffix=''):
+        return Template("""
+            REFRESH MATERIALIZED VIEW {{ t.full_table_name(quoted=True, with_prefix=True, suffix=suffix) }};
+        """).render(t=self.table, suffix=suffix)
