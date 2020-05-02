@@ -293,7 +293,10 @@ class Table(BaseDialect):
 
     def get_create_materialized_view_via_select(self, select, filter_fn=None, embed_select=True, suffix=''):
         return Template("""
-            CREATE MATERIALIZED VIEW {{ t.full_table_name(quoted=True, with_prefix=True, suffix=suffix) }} AS
+            CREATE MATERIALIZED VIEW {{ t.full_table_name(quoted=True, with_prefix=True, suffix=suffix) }}
+            {%- for property in t.properties %}
+            {{ property }}
+            {%- endfor %} AS
             SELECT
               {%- for column_value in t.column_values(filter_fn=filter_fn) %}
               {{ column_value }}{% if not loop.last %},{% endif %}
