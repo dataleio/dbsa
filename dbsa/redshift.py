@@ -86,6 +86,19 @@ class Table(BaseDialect):
             {%- endfor %};
         """).render(t=self.table, filter_fn=filter_fn, suffix=suffix)
 
+    def get_create_table_as(self, select, embed_select=True, filter_fn=None, suffix=''):
+        return Template("""
+            CREATE TABLE IF NOT EXISTS {{ t.full_table_name(quoted=True, with_prefix=True, suffix=suffix) }}
+            {%- for property in t.properties %}
+            {{ property }}
+            {%- endfor %} AS
+            SELECT
+              {%- for column_value in t.column_values(filter_fn=filter_fn) %}
+              {{ column_value }}{% if not loop.last %},{% endif %}
+              {%- endfor %}
+            FROM {{ select if not embed_select else '({}) AS vw'.format(select.strip().strip(';')) }};
+        """).render(t=self.table, select=select, embed_select=embed_select, filter_fn=filter_fn, suffix=suffix)
+
     def get_create_external_table(self, hdfs_path, fileformat, tblformat, tblproperties=None, filter_fn=None, suffix=''):
         return Template("""
             CREATE EXTERNAL TABLE {{ t.full_table_name(quoted=True, with_prefix=True, suffix=suffix) }} (
