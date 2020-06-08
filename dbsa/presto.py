@@ -61,6 +61,7 @@ class Table(BaseDialect):
     _how_to_quote_table = '"{}"'
     _how_to_quote_column = '"{}"'
     _column_setter = '{} AS {}'
+    _sample_value_function = 'ARBITRARY({c})'
 
     def columns(self, include_partitions=True, filter_fn=None):
         columns = self.table._columns if not filter_fn else filter(filter_fn, self.table._columns)
@@ -119,7 +120,7 @@ class Table(BaseDialect):
             {%- endif %}
         """).render(t=self.table, suffix=suffix, condition=condition).format(**(params or {}))
 
-    def get_select(self, filter_fn=None, suffix='', condition='', transforms=None):
+    def get_select(self, filter_fn=None, suffix='', condition='', transforms=None, limit=None):
         return Template("""
             SELECT
               {%- for column in t.columns(filter_fn=filter_fn) %}
@@ -129,7 +130,10 @@ class Table(BaseDialect):
             {%- if condition %}
             WHERE {{ condition }}
             {%- endif %}
-        """).render(t=self.table, filter_fn=filter_fn, suffix=suffix, condition=condition, tf=transforms or {})
+            {%- if limit %}
+            LIMIT {{ limit }}
+            {%- endif %}
+        """).render(t=self.table, limit=limit, filter_fn=filter_fn, suffix=suffix, condition=condition, tf=transforms or {})
 
     def get_insert_into_from_table(self, source_table_name, filter_fn=None, suffix=''):
         return self.get_insert_into_via_select(select=source_table_name, filter_fn=filter_fn, embed_select=False, suffix=suffix)

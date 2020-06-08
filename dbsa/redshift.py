@@ -61,7 +61,8 @@ class Table(BaseDialect):
     _how_to_quote_table = '"{}"'
     _how_to_quote_column = '"{}"'
     _column_setter = '{} AS {}'
-
+    _sample_value_function = 'MAX({c})'
+    
     ENCODE=dict(zip(COLUMN_ENCODE, COLUMN_ENCODE))
 
     @property
@@ -206,7 +207,7 @@ class Table(BaseDialect):
             {% endraw %};
         """).render(t=self.table, cleanup_fn=cleanup_fn, filter_fn=filter_fn, include_partitions=include_partitions, suffix=suffix)
 
-    def get_select(self, filter_fn=None, suffix='', condition='', order_by_sortkey=False, use_star=False, transforms=None):
+    def get_select(self, filter_fn=None, suffix='', condition='', order_by_sortkey=False, use_star=False, transforms=None, limit=None):
         sortkey = self.table.get_property_by_type(Sortkey) \
             if order_by_sortkey \
             else None
@@ -227,7 +228,10 @@ class Table(BaseDialect):
             {%- if sortkey %}
             ORDER BY {% for c in sortkey.attrs['keys'] %}"{{ c }}"{% if not loop.last %}, {% endif %}{% endfor %}
             {%- endif %}
-        """).render(t=self.table, filter_fn=filter_fn, suffix=suffix, condition=condition, sortkey=sortkey, use_star=use_star, tf=transforms or {})
+            {%- if limit %}
+            LIMIT {{ limit }}
+            {%- endif %}
+        """).render(t=self.table, limit=limit, filter_fn=filter_fn, suffix=suffix, condition=condition, sortkey=sortkey, use_star=use_star, tf=transforms or {})
 
     def get_unload_table(self, filter_fn=None):
         return self.get_unload_via_select(select=self.get_select(filter_fn))

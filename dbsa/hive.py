@@ -59,6 +59,7 @@ class Table(BaseDialect):
     _how_to_quote_table = '`{}`'
     _how_to_quote_column = '`{}`'
     _column_setter = '{} {}'
+    _sample_value_function = 'MAX({c})'
 
     def get_create_table(self, filter_fn=None, external_table=False, hdfs_path=None, tblformat=None, tblproperties=None, suffix=''):
         return Template("""
@@ -131,7 +132,7 @@ class Table(BaseDialect):
                 .format(**self.table.get_current_partition_params(params))
         )
 
-    def get_select(self, filter_fn=None, suffix='', condition='', transforms=None):
+    def get_select(self, filter_fn=None, suffix='', condition='', transforms=None, limit=None):
         return Template("""
             SELECT
               {%- for column in t.columns(filter_fn=filter_fn) %}
@@ -141,7 +142,10 @@ class Table(BaseDialect):
             {%- if condition %}
             WHERE {{ condition }}
             {%- endif %}
-        """).render(t=self.table, filter_fn=filter_fn, suffix=suffix, condition=condition, tf=transforms or {})
+            {%- if limit %}
+            LIMIT {{ limit }}
+            {%- endif %}
+        """).render(t=self.table, limit=limit, filter_fn=filter_fn, suffix=suffix, condition=condition, tf=transforms or {})
 
     def get_insert_into_from_table(self, source_table_name, filter_fn=None, suffix=''):
         return self.get_insert_into_via_select(select=source_table_name, filter_fn=filter_fn, embed_select=False, suffix=suffix)

@@ -387,6 +387,7 @@ def add_metaclass(metaclass):
 class Table(object):
     table_prefix = ''
     _how_to_quote = '"{}"'
+    _sample_value_function = 'MAX({c})'
 
     def __init__(self, schema, dialect=None, **values):
         if not hasattr(self, '_prototype'):
@@ -453,6 +454,7 @@ class Table(object):
             if not p._property_type: raise NotSupportedDialect
 
         self._how_to_quote = dialect._how_to_quote_table
+        self._sample_value_function = dialect._sample_value_function
         self.dialect = dialect
 
     def _quote(self, text, quoted):
@@ -462,11 +464,15 @@ class Table(object):
         columns = self._columns if not filter_fn else filter(filter_fn, self._columns)
         return [c for c in columns if (not c.partition) or include_partitions]
 
-    def column_names(self, include_partitions=True, filter_fn=None):
-        return {c.name for c in self.columns(include_partitions=include_partitions, filter_fn=filter_fn)}
+    def column_names(self, include_partitions=True, filter_fn=None, as_list=False):
+        column_names = [c.name for c in self.columns(include_partitions=include_partitions, filter_fn=filter_fn)]
+        if as_list: return column_names
+        return set(column_names)
 
-    def partition_names(self):
-        return {p.name for p in self.partitions}
+    def partition_names(self, as_list=False):
+        partition_names = [p.name for p in self.partitions]
+        if as_list: return partition_names
+        return set(partition_names)
 
     def full_table_name(self, quoted=False, with_prefix=False, suffix=''):
         table_name = self._quote((self.table_name_with_prefix if with_prefix else self.table_name) + suffix, quoted)
@@ -501,6 +507,7 @@ class Dialect(object):
     _how_to_quote_table = '"{}"'
     _how_to_quote_column = '"{}"'
     _column_setter = '{} AS {}'
+    _sample_value_function = 'MAX({c})'
     _exposed_table_functions = [
         'partitions',
         'properties',
@@ -563,11 +570,12 @@ class Dialect(object):
     def get_select(self, filter_fn=None, suffix='', condition='', transforms=None):
         raise NotImplemented()
 
-    def get_select_current_partition(self, filter_fn=None, condition='', params=None, ignored_partitions=None, transforms=None, suffix=''):
+    def get_select_current_partition(self, filter_fn=None, condition='', params=None, ignored_partitions=None, transforms=None, suffix='', limit=None):
         return self.get_select(
             filter_fn=filter_fn,
             suffix=suffix,
             transforms=transforms,
+            limit=limit,
             condition=self.table.get_current_partition_condition(condition, ignored_partitions) \
                 .format(**self.table.get_current_partition_params(params))
         )
@@ -593,3 +601,15 @@ class Dialect(object):
 
     def get_create_current_partition_view(self, suffix='_latest', condition='', ignored_partitions=None, params=None, transforms=None):
         raise NotImplemented()
+
+    def get_sample_column_value(self, filter_fn=None, condition='', params=None, ignored_partitions=None, suffix=''):
+        return self.get_select(
+            filter_fn=filter_fn,
+            suffix=suffix,
+            transforms={
+                column_name : self._sample_value_function
+                for column_name in self.column_names(as_list=True)
+            },
+            condition=self.table.get_current_partition_condition(condition, ignored_partitions) \
+                .format(**self.table.get_current_partition_params(params))
+        )
