@@ -567,7 +567,7 @@ class Dialect(object):
     def get_truncate_table(self, suffix=''):
         raise NotImplemented()
 
-    def get_select(self, filter_fn=None, suffix='', condition='', transforms=None):
+    def get_select(self, filter_fn=None, suffix='', condition='', transforms=None, limit=None):
         raise NotImplemented()
 
     def get_select_current_partition(self, filter_fn=None, condition='', params=None, ignored_partitions=None, transforms=None, suffix='', limit=None):
@@ -602,10 +602,11 @@ class Dialect(object):
     def get_create_current_partition_view(self, suffix='_latest', condition='', ignored_partitions=None, params=None, transforms=None):
         raise NotImplemented()
 
-    def get_sample_column_value(self, filter_fn=None, condition='', params=None, ignored_partitions=None, suffix=''):
+    def get_sample_column_value(self, filter_fn=None, condition='', params=None, ignored_partitions=None, suffix='', limit=None):
         return self.get_select(
             filter_fn=filter_fn,
             suffix=suffix,
+            limit=limit,
             transforms={
                 column_name : self._sample_value_function
                 for column_name in self.column_names(as_list=True)
