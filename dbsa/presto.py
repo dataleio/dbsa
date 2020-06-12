@@ -150,7 +150,7 @@ class Table(BaseDialect):
               {{ column_value }}{% if not loop.last %},{% endif %}
               {%- endfor %}
             FROM {{ select if not embed_select else '({}) AS vw'.format(select) }}
-        """).render(t=self.table, select=select, embed_select=embed_select, suffix=suffix)
+        """).render(t=self.table, select=select, filter_fn=filter_fn, embed_select=embed_select, suffix=suffix)
 
     def get_drop_current_partition_view(self, suffix='_latest'):
         return Template("""
