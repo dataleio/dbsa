@@ -166,3 +166,26 @@ class Table(BaseDialect):
             select=self.get_select_current_partition(condition=condition, ignored_partitions=ignored_partitions, params=params, transforms=transforms),
             suffix=suffix,
         )
+
+    def get_incremental_update_select(self, update_select, row_identifier, condition='', ignored_partitions=None, params=None, transforms=None):
+        return Template("""
+            WITH incremental_update AS (
+                {{ update_select }}
+            ),
+            recent_data AS (
+                {{ select }}
+            )
+            SELECT *
+            FROM incremental_update
+            UNION ALL
+            SELECT * 
+            FROM recent_data
+            WHERE {{ row_identifier }} NOT IN (
+                SELECT {{ row_identifier }}
+                FROM incremental_update
+            )
+        """).render(
+            select=self.get_select_current_partition(condition=condition, ignored_partitions=ignored_partitions, params=params, transforms=transforms),
+            update_select=update_select,
+            row_identifier=row_identifier
+        )
