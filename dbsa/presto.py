@@ -192,7 +192,7 @@ class Table(BaseDialect):
                 ignored_partitions=ignored_partitions,
                 params=params,
                 transforms=transforms,
-                filter_fn=filter_fn or lambda x: x.name not in map(lambda y: y.name, self.partitions)),
+                filter_fn=filter_fn or (lambda x: x.name not in map(lambda y: y.name, self.partitions)),
             update_select=update_select,
             row_identifier=row_identifier,
         )
