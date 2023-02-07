@@ -167,7 +167,7 @@ class Table(BaseDialect):
             suffix=suffix,
         )
 
-    def get_incremental_update_select(self, update_select, row_identifier=None, condition='', ignored_partitions=None, params=None, transforms=None):
+    def get_incremental_update_select(self, update_select, row_identifier=None, filter_fn=None, condition='', ignored_partitions=None, params=None, transforms=None):
         return Template("""
             WITH incremental_update AS (
                 {{ update_select }}
@@ -187,7 +187,12 @@ class Table(BaseDialect):
             )
             {%- endif %}
         """).render(
-            select=self.get_select_current_partition(condition=condition, ignored_partitions=ignored_partitions, params=params, transforms=transforms),
+            select=self.get_select_current_partition(
+                condition=condition,
+                ignored_partitions=ignored_partitions,
+                params=params,
+                transforms=transforms,
+                filter_fn=filter_fn or lambda x: x.name not in map(lambda y: y.name, self.partitions)),
             update_select=update_select,
-            row_identifier=row_identifier
+            row_identifier=row_identifier,
         )
