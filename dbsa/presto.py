@@ -167,7 +167,7 @@ class Table(BaseDialect):
             suffix=suffix,
         )
 
-    def get_incremental_update_select(self, update_select, row_identifier, condition='', ignored_partitions=None, params=None, transforms=None):
+    def get_incremental_update_select(self, update_select, row_identifier=None, condition='', ignored_partitions=None, params=None, transforms=None):
         return Template("""
             WITH incremental_update AS (
                 {{ update_select }}
@@ -180,10 +180,12 @@ class Table(BaseDialect):
             UNION ALL
             SELECT * 
             FROM recent_data
+            {%- if row_identifier %}
             WHERE {{ row_identifier }} NOT IN (
                 SELECT {{ row_identifier }}
                 FROM incremental_update
             )
+            {%- endif %}
         """).render(
             select=self.get_select_current_partition(condition=condition, ignored_partitions=ignored_partitions, params=params, transforms=transforms),
             update_select=update_select,
