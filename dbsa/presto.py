@@ -157,12 +157,13 @@ class Table(BaseDialect):
             DROP VIEW IF EXISTS {{ t.full_table_name(quoted=True, with_prefix=True, suffix=suffix) }}
         """).render(t=self.table, suffix=suffix)
 
-    def get_create_current_partition_view(self, suffix='_latest', condition='', ignored_partitions=None, params=None, transforms=None):
+    def get_create_current_partition_view(self, suffix='_latest', condition='', ignored_partitions=None, params=None, transforms=None, security_invoker=False):
         return Template("""
-            CREATE OR REPLACE VIEW {{ t.full_table_name(quoted=True, with_prefix=True, suffix=suffix) }} AS
+            CREATE OR REPLACE VIEW {{ t.full_table_name(quoted=True, with_prefix=True, suffix=suffix) }}{%- if security_invoker %} SECURITY INVOKER{%- endif %} AS
             {{ select }}
         """).render(
             t=self.table,
             select=self.get_select_current_partition(condition=condition, ignored_partitions=ignored_partitions, params=params, transforms=transforms),
             suffix=suffix,
+            security_invoker=security_invoker
         )
