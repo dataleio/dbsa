@@ -167,32 +167,40 @@ class Table(BaseDialect):
             suffix=suffix,
         )
 
-    def get_incremental_update_select(self, update_select, row_identifier=None, filter_fn=None, condition='', ignored_partitions=None, params=None, transforms=None):
+    def get_upsert_select(self, update_select, row_identifier=None, filter_fn=None, condition='', ignored_partitions=None, params=None, transforms=None):
+        filter_fn = filter_fn or (lambda x: x.name not in map(lambda y: y.name, self.partitions))
         return Template("""
             WITH incremental_update AS (
                 {{ update_select }}
-            ),
-            recent_data AS (
-                {{ select }}
             )
-            SELECT *
+            SELECT 
+              {%- for column_value in t.column_values(filter_fn=filter_fn) %}
+              {{ column_value }}{% if not loop.last %},{% endif %}
+              {%- endfor %}
             FROM incremental_update
             UNION ALL
-            SELECT * 
-            FROM recent_data
+            SELECT 
+              {%- for column_value in t.column_values(filter_fn=filter_fn) %}
+              {{ column_value }}{% if not loop.last %},{% endif %}
+              {%- endfor %}
+            FROM {{ '({}) AS d'.format(select) }}
             {%- if row_identifier %}
-            WHERE {{ row_identifier }} NOT IN (
-                SELECT {{ row_identifier }}
-                FROM incremental_update
+            WHERE NOT EXISTS (
+                SELECT 1
+                FROM incremental_update AS u
+                WHERE u.{{ row_identifier }} = d.{{ row_identifier }}
             )
             {%- endif %}
         """).render(
+            t=self.table,
             select=self.get_select_current_partition(
                 condition=condition,
                 ignored_partitions=ignored_partitions,
                 params=params,
                 transforms=transforms,
-                filter_fn=filter_fn or (lambda x: x.name not in map(lambda y: y.name, self.partitions)),
+                filter_fn=filter_fn
+            ),
             update_select=update_select,
             row_identifier=row_identifier,
+            filter_fn=filter_fn,
         )
