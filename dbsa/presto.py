@@ -166,3 +166,44 @@ class Table(BaseDialect):
             select=self.get_select_current_partition(condition=condition, ignored_partitions=ignored_partitions, params=params, transforms=transforms),
             suffix=suffix,
         )
+
+    def get_upsert_select(self, update_select, primary_keys=None, filter_fn=None, condition='', ignored_partitions=None, params=None, transforms=None):
+        filter_fn = filter_fn or (lambda x: x.name not in map(lambda y: y.name, self.partitions))
+        return Template("""
+            WITH incremental_update AS (
+                {{ update_select }}
+            )
+            SELECT 
+              {%- for column_value in t.column_values(filter_fn=filter_fn) %}
+              {{ column_value }}{% if not loop.last %},{% endif %}
+              {%- endfor %}
+            FROM incremental_update
+            UNION ALL
+            SELECT 
+              {%- for column_value in t.column_values(filter_fn=filter_fn) %}
+              {{ column_value }}{% if not loop.last %},{% endif %}
+              {%- endfor %}
+            FROM {{ '({}) AS d'.format(select) }}
+            {%- if t.column_values(filter_fn=primary_keys_fn) | list %}
+            WHERE NOT EXISTS (
+                SELECT 1
+                FROM incremental_update AS u
+                WHERE 
+                  {%- for pk in t.column_values(filter_fn=primary_keys_fn) %}
+                  {% if not loop.first %}AND {% endif %}u.{{ pk }} = d.{{ pk }}
+                  {%- endfor %}
+            )
+            {%- endif %}
+        """).render(
+            t=self.table,
+            select=self.get_select_current_partition(
+                condition=condition,
+                ignored_partitions=ignored_partitions,
+                params=params,
+                transforms=transforms,
+                filter_fn=filter_fn
+            ),
+            update_select=update_select,
+            primary_keys_fn=lambda c: c.name in (primary_keys or []),
+            filter_fn=filter_fn,
+        )
