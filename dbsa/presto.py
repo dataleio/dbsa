@@ -167,7 +167,7 @@ class Table(BaseDialect):
             suffix=suffix,
         )
 
-    def get_upsert_select(self, update_select, row_identifier=None, filter_fn=None, condition='', ignored_partitions=None, params=None, transforms=None):
+    def get_upsert_select(self, update_select, primary_keys=None, filter_fn=None, condition='', ignored_partitions=None, params=None, transforms=None):
         filter_fn = filter_fn or (lambda x: x.name not in map(lambda y: y.name, self.partitions))
         return Template("""
             WITH incremental_update AS (
@@ -184,11 +184,14 @@ class Table(BaseDialect):
               {{ column_value }}{% if not loop.last %},{% endif %}
               {%- endfor %}
             FROM {{ '({}) AS d'.format(select) }}
-            {%- if row_identifier %}
+            {%- if t.column_values(filter_fn=primary_keys_fn) | list %}
             WHERE NOT EXISTS (
                 SELECT 1
                 FROM incremental_update AS u
-                WHERE u.{{ row_identifier }} = d.{{ row_identifier }}
+                WHERE 
+                  {%- for pk in t.column_values(filter_fn=primary_keys_fn) %}
+                  {% if not loop.first %}AND {% endif %}u.{{ pk }} = d.{{ pk }}
+                  {%- endfor %}
             )
             {%- endif %}
         """).render(
@@ -201,6 +204,6 @@ class Table(BaseDialect):
                 filter_fn=filter_fn
             ),
             update_select=update_select,
-            row_identifier=row_identifier,
+            primary_keys_fn=lambda c: c.name in (primary_keys or []),
             filter_fn=filter_fn,
         )
