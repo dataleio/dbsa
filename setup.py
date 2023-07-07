@@ -1,5 +1,5 @@
 from setuptools import setup, find_packages
-version = '0.0.39'
+version = '0.0.40'
 
 setup(
     name='dbsa',
