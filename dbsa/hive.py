@@ -81,7 +81,7 @@ class Table(BaseDialect):
             {%- if tblformat %}
             {{ tblformat }}
             {%- endif %}
-            {%- for property in t.properties %}
+            {%- for property in t.get_properties() %}
             {{ property }}{% if not loop.last %},{% endif %}
             {%- endfor %}
             {%- if external_table and hdfs_path %}
