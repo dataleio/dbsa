@@ -86,16 +86,16 @@ class Table(BaseDialect):
             {%- if inspect.getdoc(t) %}
             COMMENT '{{ inspect.getdoc(t)|replace("'", "''")|trim }}'
             {%- endif %}
-            {%- if t.properties or t.partitions %}
+            {%- if t.get_properties() or t.partitions %}
             WITH (
               {%- if t.partitions %}
               partitioned_by = ARRAY[
                 {%- for partition in t.partitions %}
                 '{{ partition.name }}'{% if not loop.last %},{% endif %}
                 {%- endfor %}
-              ]{% if t.properties %},{% endif %}
+              ]{% if t.get_properties() %},{% endif %}
               {%- endif %}
-              {%- for property in t.properties %}
+              {%- for property in t.get_properties() %}
               {{ property }}{% if not loop.last %},{% endif %}
               {%- endfor %}
             )

@@ -82,7 +82,7 @@ class Table(BaseDialect):
               {{ column.quoted_name }} {{ column.column_type }}{% if column.default_value %} DEFAULT {{ column.default_value }}{% endif %}{% if column.encode %} ENCODE {{ column.encode|upper }}{% endif %}{% if not loop.last %},{% endif %}
               {%- endfor %}
             )
-            {%- for property in t.properties %}
+            {%- for property in t.get_properties() %}
             {{ property }}
             {%- endfor %};
         """).render(t=self.table, filter_fn=filter_fn, suffix=suffix)
@@ -90,7 +90,7 @@ class Table(BaseDialect):
     def get_create_table_as(self, select, embed_select=True, filter_fn=None, suffix=''):
         return Template("""
             CREATE TABLE IF NOT EXISTS {{ t.full_table_name(quoted=True, with_prefix=True, suffix=suffix) }}
-            {%- for property in t.properties %}
+            {%- for property in t.get_properties() %}
             {{ property }}
             {%- endfor %} AS
             SELECT
@@ -311,7 +311,7 @@ class Table(BaseDialect):
     def get_create_materialized_view_via_select(self, select, filter_fn=None, embed_select=True, suffix=''):
         return Template("""
             CREATE MATERIALIZED VIEW {{ t.full_table_name(quoted=True, with_prefix=True, suffix=suffix) }}
-            {%- for property in t.properties %}
+            {%- for property in t.get_properties() %}
             {{ property }}
             {%- endfor %} AS
             SELECT

@@ -423,8 +423,11 @@ class Table(object):
     def table_name_with_prefix(self):
         return self.table_prefix + self.table_name
 
+    def get_properties(self):
+        return self._props
+
     def get_property_by_type(self, type):
-        for p in self.properties:
+        for p in self.get_properties():
             if isinstance(p, type):
                 return p
 
