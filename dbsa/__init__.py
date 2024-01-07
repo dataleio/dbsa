@@ -118,6 +118,18 @@ class ManualAnonimisation(TablePolicy):
 
 
 """
+TBD
+"""
+
+class ExternalTableProperties(object):
+    def __init__(self, location, configs=None):
+        self.location = location
+        self.configs = configs or {}
+
+    def get_properies(self):
+        raise NotImplemented()
+
+"""
 Generic objects that are associated to Tables. It can be a property of the table
 or a column itself.
 """
