@@ -118,7 +118,7 @@ class ManualAnonimisation(TablePolicy):
 
 
 """
-TBD
+Generic objects that are associated to Table. It can be a property of various process in a Table.
 """
 
 class ExternalTableProperties(object):
