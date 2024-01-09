@@ -2,6 +2,9 @@ from . import ExternalTableProperties as BaseExternalTableProperties
 from .presto import Table as BaseTable
 from jinja2 import Template
 import inspect
+import datetime
+import numbers
+import decimal
 
 class ExternalTableProperties(BaseExternalTableProperties):
     def get_properies(self):
@@ -16,6 +19,8 @@ class ExternalTableProperties(BaseExternalTableProperties):
 
 
 class Table(BaseTable):
+    _how_to_quote_string = "'{}'"
+
     def get_create_table_properties(self, external_table_properties=None):
         create_table_properties = []
 
@@ -41,7 +46,6 @@ class Table(BaseTable):
 
         return create_table_properties
 
-
     def get_create_table(self, filter_fn=None, suffix='', external_table_properties=None):
         return Template("""
             CREATE TABLE IF NOT EXISTS {{ t.full_table_name(quoted=True, with_prefix=True, suffix=suffix) }} (
@@ -60,3 +64,43 @@ class Table(BaseTable):
             )
             {%- endif %}
         """).render(t=self.table, d=self, filter_fn=filter_fn, inspect=inspect, suffix=suffix, tbl_properties=self.get_create_table_properties(external_table_properties))
+
+    def get_current_partition_list(self, ignored_partitions=None):
+        partition_names = {p.name for p in self.partitions} - set(ignored_partitions or [])
+        partitions = [p for p in self.partitions if p.name in partition_names]
+        partition_list = ', '.join([f"'{p.name}'" for p in partitions])
+        partition_values = ', '.join([f"{{{p.name}}}" for p in partitions])
+
+        return f'[{partition_list}], [{partition_values}]'
+
+    def _param_to_quoted_sting(self, param):
+        if isinstance(param, (int, float, numbers.Number, decimal.Decimal)):
+            return self._how_to_quote_string.format(str(param))
+        if isinstance(param, (datetime.date, datetime.datetime)):
+            return self._how_to_quote_string.format(param.isoformat())
+        return param
+
+    def get_add_current_partition(self, hdfs_path=None, condition='', params=None, ignored_partitions=None, suffix=''):
+        current_partition_params = {k: self._param_to_quoted_sting(v) for k, v in self.table.get_current_partition_params(params).items()}
+
+        return Template("""
+            CALL system.{% if hdfs_path %}register_partition{% else %}create_empty_partition{% endif %}('{{ t.schema }}', '{{ t.table_name_with_prefix }}', {{ condition }}{% if hdfs_path %}, '{{ hdfs_path }}'{% endif %})
+        """).render(
+            t=self.table,
+            suffix=suffix,
+            hdfs_path=hdfs_path,
+            condition=self.get_current_partition_list(ignored_partitions) \
+                .format(**current_partition_params)
+        )
+
+    def get_delete_current_partition(self, condition='', params=None, ignored_partitions=None, suffix=''):
+        current_partition_params = {k: self._to(v) for k, v in self.table.get_current_partition_params(params).items()}
+
+        return Template("""
+            CALL system.unregister_partition('{{ t.schema }}', '{{ t.table_name_with_prefix }}', {{ condition }})
+        """).render(
+            t=self.table,
+            suffix=suffix,
+            condition=self.get_current_partition_list(ignored_partitions) \
+                .format(**current_partition_params)
+        )
