@@ -3,6 +3,8 @@ from .presto import Table as BaseTable
 from jinja2 import Template
 import inspect
 import datetime
+import numbers
+import decimal
 
 class ExternalTableProperties(BaseExternalTableProperties):
     def get_properies(self):
@@ -72,7 +74,7 @@ class Table(BaseTable):
         return f'[{partition_list}], [{partition_values}]'
 
     def _param_to_quoted_sting(self, param):
-        if isinstance(param, int):
+        if isinstance(param, (int, float, numbers.Number, decimal.Decimal)):
             return self._how_to_quote_string.format(str(param))
         if isinstance(param, (datetime.date, datetime.datetime)):
             return self._how_to_quote_string.format(param.isoformat())
