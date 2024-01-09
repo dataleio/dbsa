@@ -92,15 +92,3 @@ class Table(BaseTable):
             condition=self.get_current_partition_list(ignored_partitions) \
                 .format(**current_partition_params)
         )
-
-    def get_delete_current_partition(self, condition='', params=None, ignored_partitions=None, suffix=''):
-        current_partition_params = {k: self._param_to_quoted_sting(v) for k, v in self.table.get_current_partition_params(params).items()}
-
-        return Template("""
-            CALL system.unregister_partition('{{ t.schema }}', '{{ t.table_name_with_prefix }}', {{ condition }})
-        """).render(
-            t=self.table,
-            suffix=suffix,
-            condition=self.get_current_partition_list(ignored_partitions) \
-                .format(**current_partition_params)
-        )
