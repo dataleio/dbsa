@@ -94,7 +94,7 @@ class Table(BaseTable):
         )
 
     def get_delete_current_partition(self, condition='', params=None, ignored_partitions=None, suffix=''):
-        current_partition_params = {k: self._to(v) for k, v in self.table.get_current_partition_params(params).items()}
+        current_partition_params = {k: self._param_to_quoted_sting(v) for k, v in self.table.get_current_partition_params(params).items()}
 
         return Template("""
             CALL system.unregister_partition('{{ t.schema }}', '{{ t.table_name_with_prefix }}', {{ condition }})
