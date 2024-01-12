@@ -13,7 +13,7 @@ class ExternalTableProperties(BaseExternalTableProperties):
         ]
 
         for k, v in self.configs.items():
-            properties.append(Template("{{ k }} = '{{ v }}'").render(k=k, v=v))
+            properties.append(Template("{{ k }} = {% if v is number %}{{ v }}{% else %}'{{ v }}'{% endif %}").render(k=k, v=v))
 
         return properties
 
