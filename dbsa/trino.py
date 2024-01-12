@@ -71,7 +71,7 @@ class Table(BaseTable):
         partition_list = ', '.join([f"'{p.name}'" for p in partitions])
         partition_values = ', '.join([f"{{{p.name}}}" for p in partitions])
 
-        return f'[{partition_list}], [{partition_values}]'
+        return f'ARRAY[{partition_list}], ARRAY[{partition_values}]'
 
     def _param_to_quoted_sting(self, param):
         if isinstance(param, (int, float, numbers.Number, decimal.Decimal)):
