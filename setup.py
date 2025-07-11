@@ -1,5 +1,5 @@
 from setuptools import setup, find_packages
-version = '0.0.48'
+version = '0.0.49'
 
 setup(
     name='dbsa',
@@ -20,5 +20,5 @@ setup(
         ],
     },
     test_suite="dbsa.tests",
-    url='https://github.com/bfaludi/dbsa',
+    url='https://github.com/dataleio/dbsa',
 )
