@@ -41,7 +41,7 @@ class Table(BaseDialect):
         JSON: 'JSON',
         Date: 'DATE',
         Time: 'TIME',
-        Timestamp: 'TIMESTAMP',
+        Timestamp: 'TIMESTAMP{% if attrs.length %}({{ attrs.length }}){% endif %}{% if attrs.with_timezone %} WITH TIME ZONE{% endif %}',
         Array: 'ARRAY({{ data_type.column_type }})',
         Map: 'MAP({{ primitive_type.column_type }}, {{ data_type.column_type }})',
         Row: "ROW({% for c in columns %}{{ c.quoted_name }} {{ c.column_type }}{% if not loop.last %}, {% endif%}{% endfor %})",
