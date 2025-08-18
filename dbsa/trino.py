@@ -7,9 +7,16 @@ import numbers
 import decimal
 
 class ExternalTableProperties(BaseExternalTableProperties):
+    def __init__(self, location, configs=None, location_property_name='external_location'):
+        super().__init__(location, configs)
+        self.location_property_name = location_property_name
+
     def get_properies(self):
         properties = [
-            Template("external_location = '{{ location }}'").render(location=self.location)
+            Template("{{ property_name }} = '{{ location }}'").render(
+                property_name=self.location_property_name,
+                location=self.location
+            )
         ]
 
         for k, v in self.configs.items():
@@ -20,17 +27,27 @@ class ExternalTableProperties(BaseExternalTableProperties):
 
 class Table(BaseTable):
     _how_to_quote_string = "'{}'"
+    _partition_property_name = 'partitioned_by'
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def get_partition_property(self):
+        if self.table.partitions:
+            return Template(
+            """{{ partition_property }} = ARRAY[
+                {%- for partition in t.partitions %}
+                '{{ partition.name }}'{% if not loop.last %},{% endif %}
+                {%- endfor %}
+              ]""").render(t=self.table, partition_property=self._partition_property_name)
+        return None
 
     def get_create_table_properties(self, external_table_properties=None):
         create_table_properties = []
 
-        if self.table.partitions:
-            create_table_properties.append(Template(
-            """partitioned_by = ARRAY[
-                {%- for partition in t.partitions %}
-                '{{ partition.name }}'{% if not loop.last %},{% endif %}
-                {%- endfor %}
-              ]""").render(t=self.table))
+        partition_property = self.get_partition_property()
+        if partition_property:
+            create_table_properties.append(partition_property)
 
         if self.table.get_properties():
             create_table_properties.append(Template(
