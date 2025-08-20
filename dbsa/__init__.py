@@ -526,6 +526,9 @@ class Table(object):
     def set_catalog(self, catalog):
         self.catalog = catalog
 
+    def set_schema(self, schema):
+        self.schema = schema
+
 class Dialect(object):
     _column_types = {}
     _req_properties = {}
