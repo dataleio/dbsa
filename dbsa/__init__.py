@@ -47,7 +47,7 @@ Cleanup function for staging tables
 """
 
 def cleanup_fn(value, quoted, dashed):
-    rvalue = re.sub('^.*\((.*?)\)$', '\\1', str(value))
+    rvalue = re.sub(r'^.*\((.*?)\)$', r'\1', str(value))
     if not quoted:
         rvalue = rvalue.replace("'", '')
     if not dashed:
@@ -401,7 +401,7 @@ class Table(object):
     _how_to_quote = '"{}"'
     _sample_value_function = 'MAX({c})'
 
-    def __init__(self, schema, dialect=None, **values):
+    def __init__(self, schema, dialect=None, catalog=None, **values):
         if not hasattr(self, '_prototype'):
             raise PrototypeRequired('Prototype declaration is required!')
 
@@ -416,6 +416,7 @@ class Table(object):
         self._policies = {p.__class__.__name__ : p for p in self._prototype.policies}
 
         self.schema = schema
+        self.catalog = catalog
         self.dialect = None
         self.register_dialect(dialect)
 
@@ -492,12 +493,20 @@ class Table(object):
     def full_table_name(self, quoted=False, with_prefix=False, suffix=''):
         table_name = self._quote((self.table_name_with_prefix if with_prefix else self.table_name) + suffix, quoted)
         schema = self._quote(self.schema, quoted)
-        return '{}.{}'.format(schema, table_name)
+        if self.catalog is not None:
+            catalog = self._quote(self.catalog, quoted)
+            return '{}.{}.{}'.format(catalog, schema, table_name)
+        else:
+            return '{}.{}'.format(schema, table_name)
 
     def full_staging_table_name(self, cleanup_fn=cleanup_fn, quoted=False, with_prefix=False, suffix=''):
         table_name = self._quote((self.staging_table_name_with_prefix(cleanup_fn=cleanup_fn) if with_prefix else self.staging_table_name(cleanup_fn=cleanup_fn)) + suffix, quoted)
         schema = self._quote(self.schema, quoted)
-        return '{}.{}'.format(schema, table_name)
+        if self.catalog is not None:
+            catalog = self._quote(self.catalog, quoted)
+            return '{}.{}.{}'.format(catalog, schema, table_name)
+        else:
+            return '{}.{}'.format(schema, table_name)
 
     def column_values(self, include_partitions=True, filter_fn=None):
         return (c.default_load_value for c in self.columns(include_partitions=include_partitions, filter_fn=filter_fn))
@@ -514,6 +523,8 @@ class Table(object):
         if condition: conditions.append(condition)
         return sep.join(conditions)
 
+    def set_catalog(self, catalog):
+        self.catalog = catalog
 
 class Dialect(object):
     _column_types = {}
