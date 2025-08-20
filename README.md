@@ -2,7 +2,7 @@
 
 Database schemas for Airflow. One of the biggest issue with [Apache Airflow](https://airflow.apache.org/index.html) that it does not provide any good way to describe the database schemas within the system. It leads incorrect table definitions, hard to extend schemas and keep backwards compatibility of already existing pipelines.
 
-This package was written in mind to **use as the abstraction layer of table schemas**, and it provides support for [Presto](http://prestodb.github.io/), [Apache Hive](https://hive.apache.org/), and [Amazon Redshift](https://aws.amazon.com/redshift/).
+This package was written in mind to **use as the abstraction layer of table schemas**, and it provides support for [Presto](http://prestodb.github.io/), [Trino](https://trino.io/), [Apache Hive](https://hive.apache.org/), and [Amazon Redshift](https://aws.amazon.com/redshift/). Additionally, it includes specialized support for [Trino Iceberg](https://trino.io/docs/current/connector/iceberg.html) tables.
 
 ## Installation
 
@@ -16,40 +16,40 @@ $ pip install dbsa
 
 The following column types are supported:
 
-| Date type        | Presto support | Hive support   | Redshift support |
-| ---------------- | -------------- | -------------- | ---------------- |
-| `dbsa.Boolean`   | ✓              | ✓              | ✓                |
-| `dbsa.Tinyint`   | ✓              | ✓              | ✓                |
-| `dbsa.Smallint`  | ✓              | ✓              | ✓                |
-| `dbsa.Integer`   | ✓              | ✓              | ✓                |
-| `dbsa.Bigint`    | ✓              | ✓              | ✓                |
-| `dbsa.Real`      | ✓              | ✓              | ✓                |
-| `dbsa.Double`    | ✓              | ✓              | ✓                |
-| `dbsa.Decimal`   | ✓              | ✓              | ✓                |
-| `dbsa.Varchar`   | ✓              | ✓              | ✓                |
-| `dbsa.Char`      | ✓              | ✓              | ✓                |
-| `dbsa.Varbinary` | ✓              | ✓              |                  |
-| `dbsa.JSON`      | ✓              | ✓ AS `Varchar` |                  |
-| `dbsa.Date`      | ✓              | ✓              | ✓                |
-| `dbsa.Time`      | ✓              |                |                  |
-| `dbsa.Timestamp` | ✓              | ✓              | ✓                |
-| `dbsa.Array`     | ✓              | ✓              |                  |
-| `dbsa.Map`       | ✓              | ✓              |                  |
-| `dbsa.Row`       | ✓              | ✓              |                  |
-| `dbsa.IPAddress` | ✓              | ✓ AS `Varchar` |                  |
+| Date type        | Presto support | Trino support | Trino Iceberg support | Hive support   | Redshift support |
+| ---------------- | -------------- | ------------- | --------------------- | -------------- | ---------------- |
+| `dbsa.Boolean`   | ✓              | ✓             | ✓                     | ✓              | ✓                |
+| `dbsa.Tinyint`   | ✓              | ✓             | ✓                     | ✓              | ✓                |
+| `dbsa.Smallint`  | ✓              | ✓             | ✓                     | ✓              | ✓                |
+| `dbsa.Integer`   | ✓              | ✓             | ✓                     | ✓              | ✓                |
+| `dbsa.Bigint`    | ✓              | ✓             | ✓                     | ✓              | ✓                |
+| `dbsa.Real`      | ✓              | ✓             | ✓                     | ✓              | ✓                |
+| `dbsa.Double`    | ✓              | ✓             | ✓                     | ✓              | ✓                |
+| `dbsa.Decimal`   | ✓              | ✓             | ✓                     | ✓              | ✓                |
+| `dbsa.Varchar`   | ✓              | ✓             | ✓                     | ✓              | ✓                |
+| `dbsa.Char`      | ✓              | ✓             | ✓                     | ✓              | ✓                |
+| `dbsa.Varbinary` | ✓              | ✓             | ✓                     | ✓              |                  |
+| `dbsa.JSON`      | ✓              | ✓             | ✓                     | ✓ AS `Varchar` |                  |
+| `dbsa.Date`      | ✓              | ✓             | ✓                     | ✓              | ✓                |
+| `dbsa.Time`      | ✓              | ✓             | ✓                     |                |                  |
+| `dbsa.Timestamp` | ✓              | ✓             | ✓                     | ✓              | ✓                |
+| `dbsa.Array`     | ✓              | ✓             | ✓                     | ✓              |                  |
+| `dbsa.Map`       | ✓              | ✓             | ✓                     | ✓              |                  |
+| `dbsa.Row`       | ✓              | ✓             | ✓                     | ✓              |                  |
+| `dbsa.IPAddress` | ✓              | ✓             | ✓                     | ✓ AS `Varchar` |                  |
 
 
 ## Supported Table Properties
 
 The following table properties are supported:
 
-| Date type                | Presto support | Hive support | Redshift support |
-| ------------------------ | -------------- | ------------ | ---------------- |
-| `dbsa.Format`            | ✓              | ✓            |                  |
-| `dbsa.Bucket`            | ✓              | ✓            |                  |
-| `dbsa.Sortkey`           |                |              | ✓                |
-| `dbsa.DistributionKey`   |                |              | ✓                |
-| `dbsa.DistributionStyle` |                |              | ✓                |
+| Date type                | Presto support | Trino support | Trino Iceberg support | Hive support | Redshift support |
+| ------------------------ | -------------- | ------------- | --------------------- | ------------ | ---------------- |
+| `dbsa.Format`            | ✓              | ✓             | ✓                     | ✓            |                  |
+| `dbsa.Bucket`            | ✓              | ✓             | ✓                     | ✓            |                  |
+| `dbsa.Sortkey`           |                |               |                       |              | ✓                |
+| `dbsa.DistributionKey`   |                |               |                       |              | ✓                |
+| `dbsa.DistributionStyle` |                |               |                       |              | ✓                |
 
 ## PII data types for column classification
 
@@ -95,10 +95,12 @@ class Metrics(dbsa.Table):
 This table definition is not binded to any dialect yet. To use the table, you must bind it to one. When creating the table instances, we must specify the name of the `schema`, and fill the missing partitions. `dbsa` will not quote your data since you can use functions, UDFs, so please put quotes around your data if it's needed.
 
 ```python
-from dbsa import presto, hive
+from dbsa import presto, hive, trino, trino_iceberg
 
 presto_tbl = presto.Table(Metrics(schema='default', ds="'2019-07-27'"))
 hive_tbl = hive.Table(Metrics(schema='default', ds="'2019-07-27'"))
+trino_tbl = trino.Table(Metrics(schema='default', ds="'2019-07-27'"))
+trino_iceberg_tbl = trino_iceberg.Table(Metrics(schema='default', ds="'2019-07-27'"))
 ```
 
 After that, we can start generating SQL queries based on the dialect.
@@ -114,6 +116,36 @@ print(hive_tbl.get_delete_current_partition(ignored_partitions=['aggregation']))
 # ) PURGE
 ```
 As you can see, the dialects are working quite easily, and we can even specify that ignore our `aggregation` subpartition.
+
+## Trino and Trino Iceberg Support
+
+The package now includes support for both **Trino** and **Trino Iceberg** dialects:
+
+- **`dbsa.trino`**: Standard Trino (on Hive) support with `partitioned_by` and `external_location` properties
+- **`dbsa.trino_iceberg`**: Specialized support for Iceberg tables using `partitioning` and `location` properties
+
+### Trino Iceberg Features
+
+Trino Iceberg support includes:
+
+- **Custom partitions**: Add additional partitions beyond the table's defined partitions
+- **Iceberg-specific properties**: Uses `location` instead of `external_location` and `partitioning` instead of `partitioned_by`
+
+```python
+from dbsa import trino_iceberg
+
+# Create Iceberg table with additional custom partitions
+iceberg_tbl = trino_iceberg.Table(
+    Metrics(schema='default', ds="'2019-07-27'"),
+    custom_partitions=['region', 'category']
+)
+
+# External table properties for Iceberg
+iceberg_props = trino_iceberg.ExternalTableProperties(
+    location='s3://my-bucket/data/',
+    configs={'table_type': 'ICEBERG'}
+)
+```
 
 ```python
 print(presto_tbl.get_create_table())
@@ -157,5 +189,5 @@ class IncomingEvents(dbsa.Table):
 You must pick a dialect, and just run the following command.
 
 ```bash
-dbsa-markdown {prest|hive|redshift} file.py
+dbsa-markdown {presto|trino|trino_iceberg|hive|redshift} file.py
 ```
