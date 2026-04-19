@@ -24,7 +24,9 @@ from . import (
 from jinja2 import Template
 import inspect
 
+
 class Table(BaseDialect):
+    """Apache Hive SQL for :class:`dbsa.Table` models."""
     _column_types = {
         Boolean: 'BOOLEAN',
         Tinyint: 'TINYINT',
@@ -62,6 +64,7 @@ class Table(BaseDialect):
     _sample_value_function = 'MAX({c})'
 
     def get_create_table(self, filter_fn=None, external_table=False, hdfs_path=None, tblformat=None, tblproperties=None, suffix=''):
+        """``CREATE [EXTERNAL] TABLE`` with partition clause, serde, location, and TBLPROPERTIES."""
         return Template("""
             CREATE {% if external_table %}EXTERNAL {% endif %}TABLE IF NOT EXISTS {{ t.full_table_name(quoted=True, with_prefix=True, suffix=suffix) }} (
               {%- for column in t.columns(filter_fn=filter_fn, include_partitions=False) %}
@@ -93,21 +96,25 @@ class Table(BaseDialect):
         """).render(t=self.table, filter_fn=filter_fn, external_table=external_table, hdfs_path=hdfs_path, tblformat=tblformat, tblproperties=tblproperties, inspect=inspect, suffix=suffix)
 
     def get_drop_table(self, suffix=''):
+        """``DROP TABLE … PURGE``."""
         return Template("""
             DROP TABLE IF EXISTS {{ t.full_table_name(quoted=True, with_prefix=True, suffix=suffix) }} PURGE
         """).render(t=self.table, suffix=suffix)
 
     def get_truncate_table(self, suffix=''):
+        """``TRUNCATE TABLE``."""
         return Template("""
             TRUNCATE TABLE {{ t.full_table_name(quoted=True, with_prefix=True, suffix=suffix) }}
         """).render(t=self.table, suffix=suffix)
 
     def get_msck_table(self, suffix=''):
+        """``MSCK REPAIR TABLE``."""
         return Template("""
             MSCK REPAIR TABLE {{ t.full_table_name(quoted=True, with_prefix=True, suffix=suffix) }}
         """).render(t=self.table, suffix=suffix)
 
     def get_add_current_partition(self, hdfs_path=None, condition='', params=None, ignored_partitions=None, suffix=''):
+        """``ALTER TABLE … ADD IF NOT EXISTS PARTITION``."""
         return Template("""
             ALTER TABLE {{ t.full_table_name(quoted=True, with_prefix=True, suffix=suffix) }} ADD IF NOT EXISTS PARTITION(
               {{ condition }}
@@ -121,6 +128,7 @@ class Table(BaseDialect):
         )
 
     def get_delete_current_partition(self, condition='', params=None, ignored_partitions=None, suffix=''):
+        """``ALTER TABLE … DROP IF EXISTS PARTITION … PURGE``."""
         return Template("""
             ALTER TABLE {{ t.full_table_name(quoted=True, with_prefix=True, suffix='') }} DROP IF EXISTS PARTITION(
               {{ condition }}
@@ -133,6 +141,7 @@ class Table(BaseDialect):
         )
 
     def get_select(self, filter_fn=None, suffix='', condition='', transforms=None, limit=None):
+        """``SELECT`` with optional transforms and ``LIMIT``."""
         return Template("""
             SELECT
               {%- for column in t.columns(filter_fn=filter_fn) %}
@@ -148,9 +157,11 @@ class Table(BaseDialect):
         """).render(t=self.table, limit=limit, filter_fn=filter_fn, suffix=suffix, condition=condition, tf=transforms or {})
 
     def get_insert_into_from_table(self, source_table_name, filter_fn=None, suffix=''):
+        """``INSERT INTO`` from a table reference (no subquery wrapper)."""
         return self.get_insert_into_via_select(select=source_table_name, filter_fn=filter_fn, embed_select=False, suffix=suffix)
 
     def get_insert_into_via_select(self, select, filter_fn=None, embed_select=True, suffix=''):
+        """``INSERT INTO`` with ``PARTITION`` clause and Hive-specific column filtering."""
         ignore_const_partitions_fn = lambda x: (x.partition and not x.value) or not x.partition
         if filter_fn:
             combined_fn = lambda x: filter_fn(x) and ignore_const_partitions_fn(x)
@@ -179,6 +190,7 @@ class Table(BaseDialect):
         """).render(t=self.table, filter_fn=combined_fn, select=select, embed_select=embed_select, suffix=suffix)
 
     def get_insert_overwrite_via_select(self, select, suffix=''):
+        """``INSERT OVERWRITE TABLE`` with static partition list."""
         return Template("""
             INSERT OVERWRITE TABLE {{ t.full_table_name(quoted=True, with_prefix=True, suffix=suffix) }}
             {%- if t.partitions %}
@@ -192,11 +204,13 @@ class Table(BaseDialect):
         """).render(t=self.table, select=select, suffix=suffix)
 
     def get_drop_current_partition_view(self, suffix='_latest'):
+        """``DROP VIEW IF EXISTS``."""
         return Template("""
             DROP VIEW IF EXISTS {{ t.full_table_name(quoted=True, with_prefix=True, suffix=suffix) }}
         """).render(t=self.table, suffix=suffix)
 
     def get_create_current_partition_view(self, suffix='_latest', condition='', ignored_partitions=None, params=None, transforms=None):
+        """``CREATE OR REPLACE VIEW`` over the current partition."""
         return Template("""
             CREATE OR REPLACE VIEW {{ t.full_table_name(quoted=True, with_prefix=True, suffix=suffix) }} AS
             {{ select }}

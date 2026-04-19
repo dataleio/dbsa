@@ -6,12 +6,17 @@ import datetime
 import numbers
 import decimal
 
+
 class ExternalTableProperties(BaseExternalTableProperties):
+    """Trino ``WITH`` clause entries for external location and extra properties."""
+
     def __init__(self, location, configs=None, location_property_name='external_location'):
+        """``location_property_name`` defaults to ``external_location`` for Hive connector tables."""
         super().__init__(location, configs)
         self.location_property_name = location_property_name
 
     def get_properies(self):
+        """Return ``['key = value', …]`` lines for inclusion in ``CREATE TABLE`` ``WITH``."""
         properties = [
             Template("{{ property_name }} = '{{ location }}'").render(
                 property_name=self.location_property_name,
@@ -26,13 +31,17 @@ class ExternalTableProperties(BaseExternalTableProperties):
 
 
 class Table(BaseTable):
+    """Trino SQL (extends Presto) with ``partitioned_by`` and system partition calls."""
+
     _how_to_quote_string = "'{}'"
     _partition_property_name = 'partitioned_by'
 
     def __init__(self, *args, **kwargs):
+        """Same constructor contract as :class:`dbsa.presto.Table`."""
         super().__init__(*args, **kwargs)
 
     def get_partition_property(self):
+        """``partitioned_by = ARRAY[…]`` string or ``None`` when the table has no partitions."""
         if self.table.partitions:
             return Template(
             """{{ partition_property }} = ARRAY[
@@ -43,6 +52,7 @@ class Table(BaseTable):
         return None
 
     def get_create_table_properties(self, external_table_properties=None):
+        """Ordered fragments: partitions, format/bucket props, then external properties."""
         create_table_properties = []
 
         partition_property = self.get_partition_property()
@@ -64,6 +74,7 @@ class Table(BaseTable):
         return create_table_properties
 
     def get_create_table(self, filter_fn=None, suffix='', external_table_properties=None):
+        """``CREATE TABLE`` with optional ``external_table_properties`` in ``WITH``."""
         return Template("""
             CREATE TABLE IF NOT EXISTS {{ t.full_table_name(quoted=True, with_prefix=True, suffix=suffix) }} (
               {%- for column in d.columns(filter_fn=filter_fn) %}
@@ -83,6 +94,7 @@ class Table(BaseTable):
         """).render(t=self.table, d=self, filter_fn=filter_fn, inspect=inspect, suffix=suffix, tbl_properties=self.get_create_table_properties(external_table_properties))
 
     def get_current_partition_list(self, ignored_partitions=None):
+        """Two ``ARRAY[…]`` literals for ``CALL system.create_empty_partition`` / ``register_partition``."""
         partition_names = {p.name for p in self.partitions} - set(ignored_partitions or [])
         partitions = [p for p in self.partitions if p.name in partition_names]
         partition_list = ', '.join([f"'{p.name}'" for p in partitions])
@@ -91,6 +103,7 @@ class Table(BaseTable):
         return f'ARRAY[{partition_list}], ARRAY[{partition_values}]'
 
     def _param_to_quoted_sting(self, param):
+        """Quote numbers and dates for partition call arguments (typo preserved for compatibility)."""
         if isinstance(param, (int, float, numbers.Number, decimal.Decimal)):
             return self._how_to_quote_string.format(str(param))
         if isinstance(param, (datetime.date, datetime.datetime)):
@@ -98,6 +111,7 @@ class Table(BaseTable):
         return param
 
     def get_add_current_partition(self, hdfs_path=None, condition='', params=None, ignored_partitions=None, suffix=''):
+        """``CALL system.create_empty_partition`` or ``register_partition`` with optional HDFS path."""
         current_partition_params = {k: self._param_to_quoted_sting(v) for k, v in self.table.get_current_partition_params(params).items()}
 
         return Template("""
