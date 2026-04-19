@@ -5,7 +5,9 @@ import inspect
 import argparse
 import importlib
 
+
 def main(argv=sys.argv):
+    """CLI entrypoint: ``dbsa-markdown <dialect> <module.py> […]`` emits markdown for each Table."""
     parser = argparse.ArgumentParser()
     parser.add_argument('dialect')
     parser.add_argument('modules', nargs='+')

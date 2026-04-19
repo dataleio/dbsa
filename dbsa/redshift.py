@@ -22,7 +22,9 @@ import json
 
 COLUMN_ENCODE = ['BYTEDICT', 'DELTA', 'DELTA32K', 'LZO', 'MOSTLY8', 'MOSTLY16', 'MOSTLY32', 'RAW', 'RUNLENGTH', 'TEXT255', 'TEXT32K', 'ZSTD']
 
+
 class Table(BaseDialect):
+    """Amazon Redshift SQL (COPY, UNLOAD, DISTKEY/SORTKEY, staging helpers)."""
     _column_types = {
         Boolean: 'BOOLEAN',
         Tinyint: 'TINYINT',
@@ -67,6 +69,7 @@ class Table(BaseDialect):
 
     @property
     def jsonpath(self):
+        """JSON ``jsonpaths`` array built from columns that define a ``jsonpath`` attr."""
         return json.dumps({
             'jsonpaths': [
                 c.attrs['jsonpath']
@@ -76,6 +79,7 @@ class Table(BaseDialect):
         })
 
     def get_create_table(self, filter_fn=None, suffix=''):
+        """``CREATE TABLE IF NOT EXISTS`` with DEFAULT, ENCODE, and trailing table properties."""
         return Template("""
             CREATE TABLE IF NOT EXISTS {{ t.full_table_name(quoted=True, with_prefix=True, suffix=suffix) }} (
               {%- for column in t.columns(filter_fn=filter_fn) %}
@@ -88,6 +92,7 @@ class Table(BaseDialect):
         """).render(t=self.table, filter_fn=filter_fn, suffix=suffix)
 
     def get_create_table_as(self, select, embed_select=True, filter_fn=None, suffix=''):
+        """``CREATE TABLE … AS SELECT``."""
         return Template("""
             CREATE TABLE IF NOT EXISTS {{ t.full_table_name(quoted=True, with_prefix=True, suffix=suffix) }}
             {%- for property in t.get_properties() %}
@@ -101,6 +106,7 @@ class Table(BaseDialect):
         """).render(t=self.table, select=select, embed_select=embed_select, filter_fn=filter_fn, suffix=suffix)
 
     def get_create_external_table(self, hdfs_path, fileformat, tblformat, tblproperties=None, filter_fn=None, suffix=''):
+        """``CREATE EXTERNAL TABLE`` with ``STORED AS``, ``LOCATION``, and optional properties."""
         return Template("""
             CREATE EXTERNAL TABLE {{ t.full_table_name(quoted=True, with_prefix=True, suffix=suffix) }} (
               {%- for column in t.columns(filter_fn=filter_fn, include_partitions=False) %}
@@ -123,6 +129,7 @@ class Table(BaseDialect):
         """).render(t=self.table, filter_fn=filter_fn, suffix=suffix, tblformat=tblformat, fileformat=fileformat, tblproperties=tblproperties, hdfs_path=hdfs_path)
 
     def get_create_staging_table(self, cleanup_fn=cleanup_fn, filter_fn=None, include_partitions=False, suffix=''):
+        """``CREATE TABLE`` for the computed staging table name."""
         return Template("""
             CREATE TABLE IF NOT EXISTS {{ t.full_staging_table_name(cleanup_fn=cleanup_fn, quoted=True, with_prefix=True, suffix=suffix) }} (
               {%- for column in t.columns(filter_fn=filter_fn, include_partitions=include_partitions) %}
@@ -132,6 +139,7 @@ class Table(BaseDialect):
         """).render(t=self.table, cleanup_fn=cleanup_fn, filter_fn=filter_fn, include_partitions=include_partitions, suffix=suffix)
 
     def get_add_external_current_partition(self, hdfs_path=None, condition='', params=None, ignored_partitions=None, suffix=''):
+        """``ALTER TABLE … ADD IF NOT EXISTS PARTITION … LOCATION``."""
         return Template("""
             ALTER TABLE {{ t.full_table_name(quoted=True, with_prefix=True, suffix=suffix) }} ADD IF NOT EXISTS PARTITION(
               {{ condition }}
@@ -145,6 +153,7 @@ class Table(BaseDialect):
         )
 
     def get_delete_external_current_partition(self, condition='', params=None, ignored_partitions=None, suffix=''):
+        """``ALTER TABLE … DROP IF EXISTS PARTITION`` (no PURGE)."""
         return Template("""
             ALTER TABLE {{ t.full_table_name(quoted=True, with_prefix=True, suffix='') }} DROP IF EXISTS PARTITION(
               {{ condition }}
@@ -157,21 +166,25 @@ class Table(BaseDialect):
         )
 
     def get_drop_table(self, suffix=''):
+        """``DROP TABLE IF EXISTS``."""
         return Template("""
             DROP TABLE IF EXISTS {{ t.full_table_name(quoted=True, with_prefix=True, suffix=suffix) }};
         """).render(t=self.table, suffix=suffix)
 
     def get_drop_staging_table(self, suffix=''):
+        """``DROP TABLE`` for the staging table."""
         return Template("""
             DROP TABLE IF EXISTS {{ t.full_staging_table_name(quoted=True, with_prefix=True, suffix=suffix) }};
         """).render(t=self.table, suffix=suffix)
 
     def get_truncate_table(self, suffix=''):
+        """``TRUNCATE TABLE``."""
         return Template("""
             TRUNCATE TABLE {{ t.full_table_name(quoted=True, with_prefix=True, suffix=suffix) }};
         """).render(t=self.table, suffix=suffix)
 
     def get_update_current_partition_for_manually_set_columns(self, suffix='', condition='', ignored_partitions=None, params=None):
+        """``UPDATE`` only columns marked with :meth:`Column.set_column_value`; empty string if none."""
         filter_fn = lambda x: x.manually_set
         if not len(self.table.columns(filter_fn=filter_fn, include_partitions=False)):
             return ''
@@ -190,6 +203,7 @@ class Table(BaseDialect):
                         .format(**self.table.get_current_partition_params(params)))
 
     def get_copy_to_staging(self, cleanup_fn=cleanup_fn, filter_fn=None, include_partitions=False, suffix=''):
+        """``COPY`` into staging with templated path, credentials, and copy options."""
         return Template("""
             COPY {{ t.full_staging_table_name(cleanup_fn=cleanup_fn, quoted=True, with_prefix=True, suffix=suffix) }} (
               {%- for column in t.columns(filter_fn=filter_fn, include_partitions=include_partitions) %}
@@ -208,6 +222,7 @@ class Table(BaseDialect):
         """).render(t=self.table, cleanup_fn=cleanup_fn, filter_fn=filter_fn, include_partitions=include_partitions, suffix=suffix)
 
     def get_select(self, filter_fn=None, suffix='', condition='', order_by_sortkey=False, use_star=False, transforms=None, limit=None):
+        """``SELECT`` with optional ``ORDER BY`` sortkey columns, ``*``, transforms, and ``LIMIT``."""
         sortkey = self.table.get_property_by_type(Sortkey) \
             if order_by_sortkey \
             else None
@@ -234,10 +249,12 @@ class Table(BaseDialect):
         """).render(t=self.table, limit=limit, filter_fn=filter_fn, suffix=suffix, condition=condition, sortkey=sortkey, use_star=use_star, tf=transforms or {})
 
     def get_unload_table(self, filter_fn=None):
+        """``UNLOAD`` using :meth:`get_select` as the inner query."""
         return self.get_unload_via_select(select=self.get_select(filter_fn))
 
     @classmethod
     def get_unload_via_select(cls, select):
+        """Return a Jinja ``Template`` for ``UNLOAD``; call ``.render()`` to produce SQL text."""
         return Template(Template("""
             UNLOAD ('
               {{ select }}
@@ -252,6 +269,7 @@ class Table(BaseDialect):
         """).render(select=select.strip().strip(';').translate(str.maketrans({"'": r"\'"}))))
 
     def get_delete_from(self, condition=None, params=None, using=None, suffix=''):
+        """``DELETE`` with optional ``USING`` and ``str.format`` on ``condition`` when ``params`` given."""
         r = Template("""
             DELETE FROM {{ t.full_table_name(quoted=True, with_prefix=True, suffix=suffix) }}
             {%- if using %}
@@ -266,6 +284,7 @@ class Table(BaseDialect):
         return r
 
     def get_delete_upsert(self, pk_columns, cleanup_fn=cleanup_fn, using=None, params=None, suffix=''):
+        """``DELETE`` joining target to staging (default) on ``pk_columns``."""
         table = self.table.full_table_name(quoted=True, with_prefix=True, suffix=suffix)
         if not using:
             using = self.table.full_staging_table_name(cleanup_fn=cleanup_fn, quoted=True, with_prefix=True, suffix=suffix)
@@ -277,9 +296,11 @@ class Table(BaseDialect):
         return self.get_delete_from(condition, using=using, params=params, suffix=suffix)
 
     def get_insert_into_from_table(self, source_table_name, filter_fn=None, suffix=''):
+        """``INSERT INTO`` from a table reference."""
         return self.get_insert_into_via_select(select=source_table_name, filter_fn=filter_fn, embed_select=False, suffix=suffix)
 
     def get_insert_into_via_select(self, select, filter_fn=None, embed_select=True, suffix=''):
+        """``INSERT INTO`` from a SELECT (optional subquery wrapper)."""
         return Template("""
             INSERT INTO {{ t.full_table_name(quoted=True, with_prefix=True, suffix=suffix) }} (
               {%- for column in t.columns(filter_fn=filter_fn) %}
@@ -294,11 +315,13 @@ class Table(BaseDialect):
         """).render(t=self.table, select=select, embed_select=embed_select, filter_fn=filter_fn, suffix=suffix)
 
     def get_drop_current_partition_view(self, suffix='_latest'):
+        """``DROP VIEW IF EXISTS``."""
         return Template("""
             DROP VIEW IF EXISTS {{ t.full_table_name(quoted=True, with_prefix=True, suffix=suffix) }};
         """).render(t=self.table, suffix=suffix)
 
     def get_create_current_partition_view(self, suffix='_latest', condition='', ignored_partitions=None, params=None, transforms=None):
+        """``CREATE OR REPLACE VIEW`` over the current partition."""
         return Template("""
             CREATE OR REPLACE VIEW {{ t.full_table_name(quoted=True, with_prefix=True, suffix=suffix) }} AS
             {{ select }};
@@ -309,6 +332,7 @@ class Table(BaseDialect):
         )
 
     def get_create_materialized_view_via_select(self, select, filter_fn=None, embed_select=True, suffix=''):
+        """``CREATE MATERIALIZED VIEW … AS SELECT`` including table properties."""
         return Template("""
             CREATE MATERIALIZED VIEW {{ t.full_table_name(quoted=True, with_prefix=True, suffix=suffix) }}
             {%- for property in t.get_properties() %}
@@ -322,11 +346,13 @@ class Table(BaseDialect):
         """).render(t=self.table, select=select, embed_select=embed_select, filter_fn=filter_fn, suffix=suffix)
 
     def get_drop_materialized_view(self, suffix=''):
+        """``DROP MATERIALIZED VIEW``."""
         return Template("""
             DROP MATERIALIZED VIEW {{ t.full_table_name(quoted=True, with_prefix=True, suffix=suffix) }};
         """).render(t=self.table, suffix=suffix)
 
     def get_refresh_materialized_view(self, suffix=''):
+        """``REFRESH MATERIALIZED VIEW``."""
         return Template("""
             REFRESH MATERIALIZED VIEW {{ t.full_table_name(quoted=True, with_prefix=True, suffix=suffix) }};
         """).render(t=self.table, suffix=suffix)

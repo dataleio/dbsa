@@ -25,7 +25,9 @@ from . import (
 from jinja2 import Template
 import inspect
 
+
 class Table(BaseDialect):
+    """Presto-compatible SQL for :class:`dbsa.Table` models."""
     _column_types = {
         Boolean: 'BOOLEAN',
         Tinyint: 'TINYINT',
@@ -64,6 +66,7 @@ class Table(BaseDialect):
     _sample_value_function = 'ARBITRARY({c})'
 
     def columns(self, include_partitions=True, filter_fn=None):
+        """Yield non-partition columns first, then partition columns when ``include_partitions``."""
         columns = self.table._columns if not filter_fn else filter(filter_fn, self.table._columns)
         kept_partitions = []
         for c in columns:
@@ -77,6 +80,7 @@ class Table(BaseDialect):
                 yield c
 
     def get_create_table(self, filter_fn=None, suffix=''):
+        """``CREATE TABLE IF NOT EXISTS`` with comments, ``partitioned_by``, and ``WITH``."""
         return Template("""
             CREATE TABLE IF NOT EXISTS {{ t.full_table_name(quoted=True, with_prefix=True, suffix=suffix) }} (
               {%- for column in d.columns(filter_fn=filter_fn) %}
@@ -103,16 +107,19 @@ class Table(BaseDialect):
         """).render(t=self.table, d=self, filter_fn=filter_fn, inspect=inspect, suffix=suffix)
 
     def get_drop_table(self, suffix=''):
+        """``DROP TABLE IF EXISTS``."""
         return Template("""
             DROP TABLE IF EXISTS {{ t.full_table_name(quoted=True, with_prefix=True, suffix=suffix) }}
         """).render(t=self.table, suffix=suffix)
 
     def get_truncate_table(self, suffix=''):
+        """``TRUNCATE TABLE``."""
         return Template("""
             TRUNCATE TABLE {{ t.full_table_name(quoted=True, with_prefix=True, suffix=suffix) }}
         """).render(t=self.table, suffix=suffix)
 
     def get_delete_from(self, condition=None, params=None, suffix=''):
+        """``DELETE FROM``; ``condition`` is ``str.format``-expanded with ``params``."""
         return Template("""
             DELETE FROM {{ t.full_table_name(quoted=True, with_prefix=True, suffix=suffix) }}
             {%- if condition %}
@@ -121,6 +128,7 @@ class Table(BaseDialect):
         """).render(t=self.table, suffix=suffix, condition=condition).format(**(params or {}))
 
     def get_select(self, filter_fn=None, suffix='', condition='', transforms=None, limit=None):
+        """``SELECT`` with optional per-column ``transforms`` (``{c}`` placeholder) and ``LIMIT``."""
         return Template("""
             SELECT
               {%- for column in t.columns(filter_fn=filter_fn) %}
@@ -136,9 +144,11 @@ class Table(BaseDialect):
         """).render(t=self.table, limit=limit, filter_fn=filter_fn, suffix=suffix, condition=condition, tf=transforms or {})
 
     def get_insert_into_from_table(self, source_table_name, filter_fn=None, suffix=''):
+        """``INSERT INTO`` selecting from a bare table reference."""
         return self.get_insert_into_via_select(select=source_table_name, filter_fn=filter_fn, embed_select=False, suffix=suffix)
 
     def get_insert_into_via_select(self, select, filter_fn=None, embed_select=True, suffix=''):
+        """``INSERT INTO`` from a SELECT; wrap as subquery when ``embed_select``."""
         return Template("""
             INSERT INTO {{ t.full_table_name(quoted=True, with_prefix=True, suffix=suffix) }} (
               {%- for column in t.columns(filter_fn=filter_fn) %}
@@ -153,11 +163,13 @@ class Table(BaseDialect):
         """).render(t=self.table, select=select, filter_fn=filter_fn, embed_select=embed_select, suffix=suffix)
 
     def get_drop_current_partition_view(self, suffix='_latest'):
+        """``DROP VIEW IF EXISTS`` for the partition view suffix."""
         return Template("""
             DROP VIEW IF EXISTS {{ t.full_table_name(quoted=True, with_prefix=True, suffix=suffix) }}
         """).render(t=self.table, suffix=suffix)
 
     def get_create_current_partition_view(self, suffix='_latest', condition='', ignored_partitions=None, params=None, transforms=None, security_invoker=False):
+        """``CREATE OR REPLACE VIEW`` over the current partition; optional ``SECURITY INVOKER``."""
         return Template("""
             CREATE OR REPLACE VIEW {{ t.full_table_name(quoted=True, with_prefix=True, suffix=suffix) }}{%- if security_invoker %} SECURITY INVOKER{%- endif %} AS
             {{ select }}
@@ -169,6 +181,7 @@ class Table(BaseDialect):
         )
 
     def get_upsert_select(self, update_select, primary_keys=None, filter_fn=None, condition='', ignored_partitions=None, params=None, transforms=None):
+        """SELECT used for merge/upsert patterns (incremental CTE + anti-join on PKs)."""
         filter_fn = filter_fn or (lambda x: x.name not in map(lambda y: y.name, self.partitions))
         return Template("""
             WITH incremental_update AS (

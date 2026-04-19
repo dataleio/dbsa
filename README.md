@@ -85,12 +85,29 @@ class Metrics(dbsa.Table):
     ds = dbsa.Partition(dbsa.Varchar(), comment="Date of the metrics are beging generated.")
     aggregation = dbsa.Partition(dbsa.Varchar(), comment="Name of the aggregation. All metrics within an aggregation are populated at the same time - however aggregations can land at different times!")
     metric = dbsa.Varchar(comment='Name of a standalone metric. (e.g: visits)')
-    dimensions = dbsa.Map(primitive_type=dbsa.Varchar(), data_type=dbsa.Varchar(), comment='Dimensions are used for the calculations')
+    dimensions: dbsa.Map[dbsa.Varchar, dbsa.Varchar] = dbsa.Column(
+        comment='Dimensions are used for the calculations'
+    )
     grouping_id = dbsa.Bigint(comment='Unique grouping identifier of the selected dimensions.')
     value = dbsa.Double(comment='Value of the metric.')
     proportion = dbsa.Double(comment='Proportion of the metric and the total value if it is applicable.')
     total = dbsa.Double(comment='Total value if it is applicable.')
 ```
+
+### Column type annotations
+
+For most columns you can put the SQL type in the **annotation** and pass options on **`Column(...)`**:
+
+- `grouping_id: dbsa.Bigint = dbsa.Column(comment="…")` — the runtime column type is taken from the annotation.
+
+**Partition columns** stay in the original form: `ds = dbsa.Partition(dbsa.Varchar(), comment="…")` (not `ds: Partition = Column(...)`).
+
+**Collections** can declare element or key/value types in **brackets** (recommended for clarity):
+
+- **Array:** `tags: dbsa.Array[dbsa.Integer] = dbsa.Column(comment="…")` — same meaning as `tags = dbsa.Array(data_type=dbsa.Integer(), comment="…")`.
+- **Map:** `dims: dbsa.Map[dbsa.Varchar, dbsa.Boolean] = dbsa.Column()` — first parameter is the map key (`primitive_type`), second is the value (`data_type`). You can use **column instances** inside the brackets when you need constructor arguments, for example `dbsa.Map[dbsa.Varchar(length=16), dbsa.Boolean()] = dbsa.Column(comment="…")`. The older `dbsa.Map(primitive_type=..., data_type=...)` style is still valid.
+
+If you mix brackets and `Column(...)`, any `primitive_type` or `data_type` you set explicitly on `Column(...)` is kept; only missing pieces are filled from the bracket types.
 
 This table definition is not binded to any dialect yet. To use the table, you must bind it to one. When creating the table instances, we must specify the name of the `schema`, and fill the missing partitions. `dbsa` will not quote your data since you can use functions, UDFs, so please put quotes around your data if it's needed.
 
